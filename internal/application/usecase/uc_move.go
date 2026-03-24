@@ -47,6 +47,7 @@ func (uc *MakeMove) Execute(ctx context.Context, cmd *appPort.MakeMoveCommand) (
 	if err != nil {
 		return nil, err
 	}
+	session.Turn++
 
 	if len(session.Players) == 1 {
 		err = uc.gameService.MakeMoveBot(session.Board, -player.Mark)
@@ -55,7 +56,6 @@ func (uc *MakeMove) Execute(ctx context.Context, cmd *appPort.MakeMoveCommand) (
 
 	mark, state := uc.gameService.CheckWin(session.Board)
 	if state == model.StatePlaying && len(session.Players) == 1 {
-		session.Turn++
 	} else if state == model.StateGameOver {
 		session.Winner = session.DetermineWinner(mark)
 		session.State = model.StateGameOver

@@ -1,16 +1,23 @@
 package mapper
 
 import (
+	"strings"
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/domain/model"
+	"tictactoe/pkg/geometry"
 )
 
 func ToSessionResponse(s *model.Session) dto.SessionResponse {
-	cells := s.Board.CloneCells()
-	board := make([]int8, len(cells))
-	for i, cell := range cells {
-		board[i] = int8(cell)
+	board := make([]string, s.Board.Height)
+	var sb strings.Builder
+	for i := range s.Board.Height {
+		sb.Reset()
+		for j := range s.Board.Width {
+			p := geometry.NewPoint(j, i)
+			sb.WriteByte(markToByte(s.Board.GetMark(p)))
+		}
+		board[i] = sb.String()
 	}
 
 	players := make([]string, 0, len(s.Players))
@@ -39,6 +46,19 @@ func stateToString(state model.State) string {
 		return "GameOver"
 	default:
 		return "Unknown"
+	}
+}
+
+func markToByte(mark model.Mark) byte {
+	switch mark {
+	case model.Empty:
+		return ' '
+	case model.X:
+		return 'X'
+	case model.O:
+		return 'O'
+	default:
+		return '?'
 	}
 }
 

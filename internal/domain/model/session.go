@@ -98,6 +98,12 @@ func (s *Session) AddPlayer(playerUUID, playerName string) error {
 	}
 
 	player := NewPlayer(playerUUID, playerName)
+	if len(s.Players) == 0 {
+		player.Mark = X
+	} else {
+		player.Mark = -s.Players[0].Mark
+	}
+
 	s.Players = append(s.Players, player)
 
 	return nil

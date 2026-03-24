@@ -3,7 +3,7 @@ package dto
 type SessionResponse struct {
 	SessionID string   `json:"session_id"`
 	State     string   `json:"state"`
-	Board     []int8   `json:"board"`
+	Board     []string `json:"board"`
 	Winner    string   `json:"winner,omitempty"`
 	Players   []string `json:"players"`
 }

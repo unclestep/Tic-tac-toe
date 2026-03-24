@@ -12,6 +12,12 @@ type Disconnect struct {
 	sessionRepo port.SessionRepo
 }
 
+func NewDisconnect(sessionRepo port.SessionRepo) *Disconnect {
+	return &Disconnect{
+		sessionRepo: sessionRepo,
+	}
+}
+
 func (uc *Disconnect) Execute(ctx context.Context, cmd *port.DisconnectCommand) (*model.Session, error) {
 	session, err := uc.sessionRepo.Get(ctx, cmd.SessionID)
 	if err != nil {

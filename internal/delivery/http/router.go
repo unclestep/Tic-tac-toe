@@ -25,11 +25,11 @@ func NewRouter(create http.Handler, connect http.Handler, start http.Handler, mo
 func (r *Router) Handler() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /game/create", r.create.ServeHTTP)
-	mux.HandleFunc("POST /game/{uuid}", r.connect.ServeHTTP)
-	mux.HandleFunc("POST /game/{uuid}/start", r.start.ServeHTTP)
-	mux.HandleFunc("POST /game/{uuid}/move", r.move.ServeHTTP)
-	mux.HandleFunc("POST /game/{uuid}", r.disconnect.ServeHTTP)
+	mux.Handle("POST /game/create", r.create)
+	mux.Handle("POST /game/{uuid}/connect", r.connect)
+	mux.Handle("POST /game/{uuid}/start", r.start)
+	mux.Handle("POST /game/{uuid}/move", r.move)
+	mux.Handle("POST /game/{uuid}/disconnect", r.disconnect)
 
 	return mux
 }
