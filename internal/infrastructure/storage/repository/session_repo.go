@@ -3,11 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
-	mapper "tictactoe/internal/infrastructure/storage/mapper"
+	"tictactoe/internal/infrastructure/storage/mapper"
 	storagePort "tictactoe/internal/infrastructure/storage/port"
+
+	"github.com/google/uuid"
 )
 
 type SessionRepo struct {
@@ -41,8 +42,8 @@ func (r *SessionRepo) Save(ctx context.Context, session *model.Session) error {
 }
 
 func (r *SessionRepo) Create(ctx context.Context, params *model.SessionParams, rules *model.Rules) (*model.Session, error) {
-	uuid := uuid.New().String()
-	session, err := model.NewSession(uuid, params, rules)
+	id := uuid.New().String()
+	session, err := model.NewSession(id, params, rules)
 
 	if err != nil {
 		return nil, err

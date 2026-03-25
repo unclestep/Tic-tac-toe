@@ -3,23 +3,24 @@ package memory
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"sync"
 	"tictactoe/internal/application/port"
 	datasourceModel "tictactoe/internal/infrastructure/storage/model"
+
+	"github.com/google/uuid"
 )
 
-type MemorySessionDataSource struct {
+type SessionDataSource struct {
 	sessions map[string]datasourceModel.SessionRecord
 	mu       sync.RWMutex
 }
 
-func NewMemorySessionDataSource() *MemorySessionDataSource {
-	return &MemorySessionDataSource{
+func NewMemorySessionDataSource() *SessionDataSource {
+	return &SessionDataSource{
 		sessions: make(map[string]datasourceModel.SessionRecord),
 	}
 }
-func (ds *MemorySessionDataSource) Fetch(_ context.Context, id string) (datasourceModel.SessionRecord, error) {
+func (ds *SessionDataSource) Fetch(_ context.Context, id string) (datasourceModel.SessionRecord, error) {
 	ds.mu.RLock()
 	record, exists := ds.sessions[id]
 	ds.mu.RUnlock()
@@ -30,7 +31,7 @@ func (ds *MemorySessionDataSource) Fetch(_ context.Context, id string) (datasour
 
 	return record, nil
 }
-func (ds *MemorySessionDataSource) Store(_ context.Context, record datasourceModel.SessionRecord) error {
+func (ds *SessionDataSource) Store(_ context.Context, record datasourceModel.SessionRecord) error {
 	if record.UUID == "" {
 		record.UUID = uuid.New().String()
 	}
@@ -41,7 +42,7 @@ func (ds *MemorySessionDataSource) Store(_ context.Context, record datasourceMod
 
 	return nil
 }
-func (ds *MemorySessionDataSource) Delete(_ context.Context, id string) error {
+func (ds *SessionDataSource) Delete(_ context.Context, id string) error {
 	ds.mu.Lock()
 	delete(ds.sessions, id)
 	ds.mu.Unlock()

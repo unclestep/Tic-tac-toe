@@ -34,5 +34,6 @@ func (g *GamePreparer) Prepare(session *model.Session, rng *rand.Rand) {
 	}
 
 	session.Turn = 0
+	session.Winner = ""
 	session.Params.Seed = int64(rng.Int())
 }

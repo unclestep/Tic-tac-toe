@@ -3,11 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
-	mapper "tictactoe/internal/infrastructure/storage/mapper"
+	"tictactoe/internal/infrastructure/storage/mapper"
 	storagePort "tictactoe/internal/infrastructure/storage/port"
+
+	"github.com/google/uuid"
 )
 
 type RulesRepo struct {

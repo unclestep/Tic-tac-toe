@@ -59,14 +59,15 @@ var domainModule = fx.Options(
 	fx.Provide(model.NewDefaultRules),
 
 	fx.Provide(service.NewWinCheckerService),
-	fx.Provide(service.NewMiniMax),
+	fx.Provide(service.NewAdvancer),
+	fx.Provide(service.NewBotLogic),
 	fx.Provide(service.NewMovementService),
 	fx.Provide(service.NewGamePreparer),
 
 	fx.Provide(
 		fx.Annotate(
-			service.NewGameService,
-			fx.As(new(servicePort.GameService)),
+			service.NewGameMechanics,
+			fx.As(new(servicePort.GameMechanics)),
 		),
 	),
 )

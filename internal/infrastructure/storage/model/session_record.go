@@ -5,6 +5,7 @@ type SessionRecord struct {
 	RulesID string
 	Board   BoardRecord
 	Players []PlayerRecord
+	Bots    int
 	Turn    int
 	Winner  string
 	State   string
@@ -18,7 +19,8 @@ type BoardRecord struct {
 }
 
 type PlayerRecord struct {
-	ID   string
-	Name string
-	Mark string
+	ID    string
+	Name  string
+	Mark  string
+	IsBot bool
 }

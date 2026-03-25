@@ -11,6 +11,7 @@ func ToSessionRecord(s *domain.Session) record.SessionRecord {
 		RulesID: s.RulesID,
 		Board:   toBoardRecord(s.Board),
 		Players: convPlayersToRecords(s.Players),
+		Bots:    s.Bots,
 		Turn:    s.Turn,
 		Winner:  s.Winner,
 		State:   stateToString(s.State),
@@ -42,9 +43,10 @@ func convPlayersToRecords(players []*domain.Player) []record.PlayerRecord {
 
 func toPlayerRecord(p *domain.Player) record.PlayerRecord {
 	return record.PlayerRecord{
-		ID:   p.UUID,
-		Name: p.Name,
-		Mark: markToString(p.Mark),
+		ID:    p.UUID,
+		Name:  p.Name,
+		Mark:  markToString(p.Mark),
+		IsBot: p.IsBot,
 	}
 }
 
@@ -78,6 +80,7 @@ func ToSessionDomain(r record.SessionRecord) *domain.Session {
 		RulesID: r.RulesID,
 		Board:   toBoardDomain(r.Board),
 		Players: convPlayersToDomain(r.Players),
+		Bots:    r.Bots,
 		Turn:    r.Turn,
 		Winner:  r.Winner,
 		State:   stringToState(r.State),
@@ -103,9 +106,10 @@ func convPlayersToDomain(records []record.PlayerRecord) []*domain.Player {
 
 func toPlayerDomain(r record.PlayerRecord) *domain.Player {
 	return &domain.Player{
-		UUID: r.ID,
-		Name: r.Name,
-		Mark: stringToMark(r.Mark),
+		UUID:  r.ID,
+		Name:  r.Name,
+		Mark:  stringToMark(r.Mark),
+		IsBot: r.IsBot,
 	}
 }
 

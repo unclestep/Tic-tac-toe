@@ -27,10 +27,6 @@ func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*mode
 		return nil, fmt.Errorf("connect: get session %s: %w", cmd.SessionID, err)
 	}
 
-	// if session.State != model.StateLobby {
-	// 	return nil, fmt.Errorf("%w: session %s", model.ErrGameAlreadyStarted, session.UUID)
-	// }
-
 	err = session.AddPlayer(cmd.PlayerID, cmd.PlayerName)
 	if err != nil {
 		return nil, err

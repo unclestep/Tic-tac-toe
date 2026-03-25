@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	ErrSetPointOutOfBounds = errors.New("set point is out of bounds")
-	ErrInvalidMark         = errors.New("invalid mark")
+	ErrInvalidConstructorArgs = errors.New("invalid board constructor args")
+	ErrSetPointOutOfBounds    = errors.New("set point is out of bounds")
+	ErrInvalidMark            = errors.New("invalid mark")
 )
 
 type Board struct {
@@ -26,12 +27,15 @@ const (
 	O     Mark = -1
 )
 
-func NewBoard(width, height int) *Board {
+func NewBoard(width, height int) (*Board, error) {
+	if width <= 0 || height <= 0 {
+		return nil, fmt.Errorf("%w: width %v, height %v", ErrInvalidConstructorArgs, width, height)
+	}
 	return &Board{
 		Width:  width,
 		Height: height,
 		cells:  make([]Mark, width*height),
-	}
+	}, nil
 }
 
 func NewBoardFromCells(width, height int, cells []Mark) *Board {
@@ -62,7 +66,15 @@ func (b *Board) Clear() {
 	clear(b.cells)
 }
 
-func (b *Board) Set(m Mark, p geometry.Point) error {
+func (b *Board) ClearMark(p geometry.Point) error {
+	if !b.InBounds(p) {
+		return fmt.Errorf("%w: point %v, board width %v, board height %v", ErrSetPointOutOfBounds, p, b.Width, b.Height)
+	}
+	b.cells[b.Width*p.Y+p.X] = Empty
+	return nil
+}
+
+func (b *Board) SetMark(m Mark, p geometry.Point) error {
 	if !b.InBounds(p) {
 		return fmt.Errorf("%w: point %v, board width %v, board height %v", ErrSetPointOutOfBounds, p, b.Width, b.Height)
 	}
@@ -96,5 +108,5 @@ func (b *Board) InBounds(p geometry.Point) bool {
 }
 
 func (b *Board) IsValidMark(m Mark) bool {
-	return m == Empty || m == X || m == O
+	return m == X || m == O
 }

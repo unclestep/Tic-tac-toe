@@ -7,21 +7,24 @@ import (
 	"tictactoe/pkg/geometry"
 )
 
-type Minimax struct {
+type BotLogic struct {
 	winChecker *WinChecker
 }
 
-func NewMiniMax(winChecker *WinChecker) *Minimax {
-	return &Minimax{
+func NewBotLogic(winChecker *WinChecker) *BotLogic {
+	return &BotLogic{
 		winChecker: winChecker,
 	}
 }
 
-func (m *Minimax) BestMove(board *model.Board, botMark model.Mark) error {
+func (m *BotLogic) BestMove(session *model.Session, botMark model.Mark) error {
+	board := session.Board
+
 	emptyCells := board.GetEmptyCells()
-	if len(emptyCells) == 0 {
-		return fmt.Errorf("Game over, no available cell")
+	if session.State == model.StateGameOver || len(emptyCells) == 0 {
+		return fmt.Errorf("%w: %s", model.ErrGameAlreadyOver, session.UUID)
 	}
+
 	bestScore := model.Mark(math.MinInt8)
 	bestPoint := geometry.Point{}
 	maximizing := true
@@ -32,9 +35,9 @@ func (m *Minimax) BestMove(board *model.Board, botMark model.Mark) error {
 	}
 
 	for _, cell := range emptyCells {
-		board.Set(botMark, cell)
+		_ = board.SetMark(botMark, cell)
 		score := m.perform(board, !maximizing, model.Mark(math.MinInt8), model.Mark(math.MaxInt8))
-		board.Set(model.Empty, cell)
+		_ = board.ClearMark(cell)
 
 		if maximizing {
 			if score > bestScore {
@@ -49,11 +52,19 @@ func (m *Minimax) BestMove(board *model.Board, botMark model.Mark) error {
 		}
 	}
 
-	board.Set(botMark, bestPoint)
+	_ = board.SetMark(botMark, bestPoint)
+
+	mark, state := m.winChecker.CheckWin(board)
+	if state == model.StateGameOver {
+		session.Winner = session.DetermineWinner(mark)
+		session.State = state
+	}
+	session.Turn++
+
 	return nil
 }
 
-func (m *Minimax) perform(board *model.Board, maximizingPlayer bool, alpha, beta model.Mark) model.Mark {
+func (m *BotLogic) perform(board *model.Board, maximizingPlayer bool, alpha, beta model.Mark) model.Mark {
 	if winner, state := m.winChecker.CheckWin(board); state == model.StateGameOver {
 		return winner
 	}
@@ -66,10 +77,10 @@ func (m *Minimax) perform(board *model.Board, maximizingPlayer bool, alpha, beta
 	if maximizingPlayer {
 		maxEval := model.Mark(math.MinInt8)
 		for _, cell := range emptyCells {
-			testBoard := board.Clone()
-			testBoard.Set(model.X, cell)
+			_ = board.SetMark(model.X, cell)
+			eval := m.perform(board, false, alpha, beta)
+			_ = board.ClearMark(cell)
 
-			eval := m.perform(testBoard, false, alpha, beta)
 			maxEval = max(maxEval, eval)
 			alpha = max(alpha, eval)
 			if beta <= alpha {
@@ -77,19 +88,19 @@ func (m *Minimax) perform(board *model.Board, maximizingPlayer bool, alpha, beta
 			}
 		}
 		return maxEval
-	} else {
-		minEval := model.Mark(math.MaxInt8)
-		for _, cell := range emptyCells {
-			testBoard := board.Clone()
-			testBoard.Set(model.O, cell)
-
-			eval := m.perform(testBoard, true, alpha, beta)
-			minEval = min(minEval, eval)
-			beta = min(beta, eval)
-			if beta <= alpha {
-				break
-			}
-		}
-		return minEval
 	}
+
+	minEval := model.Mark(math.MaxInt8)
+	for _, cell := range emptyCells {
+		_ = board.SetMark(model.O, cell)
+		eval := m.perform(board, true, alpha, beta)
+		_ = board.ClearMark(cell)
+
+		minEval = min(minEval, eval)
+		beta = min(beta, eval)
+		if beta <= alpha {
+			break
+		}
+	}
+	return minEval
 }

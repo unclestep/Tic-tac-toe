@@ -4,30 +4,38 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"tictactoe/internal/application/port"
+	appPort "tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
+	servPort "tictactoe/internal/domain/service/port"
 )
 
 type Disconnect struct {
-	sessionRepo port.SessionRepo
+	sessionRepo   appPort.SessionRepo
+	gameMechanics servPort.GameMechanics
 }
 
-func NewDisconnect(sessionRepo port.SessionRepo) *Disconnect {
+func NewDisconnect(sessionRepo appPort.SessionRepo, gameMechanics servPort.GameMechanics) *Disconnect {
 	return &Disconnect{
-		sessionRepo: sessionRepo,
+		sessionRepo:   sessionRepo,
+		gameMechanics: gameMechanics,
 	}
 }
 
-func (uc *Disconnect) Execute(ctx context.Context, cmd *port.DisconnectCommand) (*model.Session, error) {
+func (uc *Disconnect) Execute(ctx context.Context, cmd *appPort.DisconnectCommand) (*model.Session, error) {
 	session, err := uc.sessionRepo.Get(ctx, cmd.SessionID)
 	if err != nil {
-		if errors.Is(err, port.ErrSessionNotFound) {
+		if errors.Is(err, appPort.ErrSessionNotFound) {
 			return nil, fmt.Errorf("session %s not found", cmd.SessionID)
 		}
-		return nil, fmt.Errorf("connect: get session %s: %w", cmd.SessionID, err)
+		return nil, fmt.Errorf("disconnect: get session %s: %w", cmd.SessionID, err)
 	}
 
-	err = session.RemovePlayer(cmd.PlayerID)
+	err = session.HidePlayer(cmd.PlayerID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = uc.gameMechanics.Advance(session)
 	if err != nil {
 		return nil, err
 	}

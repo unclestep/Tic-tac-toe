@@ -3,24 +3,25 @@ package memory
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"sync"
 	"tictactoe/internal/application/port"
 	datasourceModel "tictactoe/internal/infrastructure/storage/model"
+
+	"github.com/google/uuid"
 )
 
-type MemoryRulesDataSource struct {
+type RulesDataSource struct {
 	rules map[string]datasourceModel.RulesRecord
 	mu    sync.RWMutex
 }
 
-func NewMemoryRulesDataSource() *MemoryRulesDataSource {
-	return &MemoryRulesDataSource{
+func NewMemoryRulesDataSource() *RulesDataSource {
+	return &RulesDataSource{
 		rules: make(map[string]datasourceModel.RulesRecord),
 	}
 }
 
-func (ds *MemoryRulesDataSource) Fetch(_ context.Context, id string) (datasourceModel.RulesRecord, error) {
+func (ds *RulesDataSource) Fetch(_ context.Context, id string) (datasourceModel.RulesRecord, error) {
 	ds.mu.RLock()
 	record, exists := ds.rules[id]
 	ds.mu.RUnlock()
@@ -32,7 +33,7 @@ func (ds *MemoryRulesDataSource) Fetch(_ context.Context, id string) (datasource
 	return record, nil
 }
 
-func (ds *MemoryRulesDataSource) Store(_ context.Context, record datasourceModel.RulesRecord) error {
+func (ds *RulesDataSource) Store(_ context.Context, record datasourceModel.RulesRecord) error {
 	// New rules - dont throw error
 	if record.UUID == "" {
 		record.UUID = uuid.New().String()
@@ -45,7 +46,7 @@ func (ds *MemoryRulesDataSource) Store(_ context.Context, record datasourceModel
 	return nil
 }
 
-func (ds *MemoryRulesDataSource) Delete(_ context.Context, id string) error {
+func (ds *RulesDataSource) Delete(_ context.Context, id string) error {
 	ds.mu.Lock()
 	delete(ds.rules, id)
 	ds.mu.Unlock()

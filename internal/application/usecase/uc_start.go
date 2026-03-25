@@ -11,14 +11,14 @@ import (
 )
 
 type Start struct {
-	sessionRepo appPort.SessionRepo
-	gameService servicePort.GameService
+	sessionRepo   appPort.SessionRepo
+	gameMechanics servicePort.GameMechanics
 }
 
-func NewStart(sessionRepo appPort.SessionRepo, gameService servicePort.GameService) *Start {
+func NewStart(sessionRepo appPort.SessionRepo, gameService servicePort.GameMechanics) *Start {
 	return &Start{
-		sessionRepo: sessionRepo,
-		gameService: gameService,
+		sessionRepo:   sessionRepo,
+		gameMechanics: gameService,
 	}
 }
 
@@ -28,7 +28,7 @@ func (uc *Start) Execute(ctx context.Context, cmd *appPort.StartCommand) (*model
 		if errors.Is(err, appPort.ErrSessionNotFound) {
 			return nil, fmt.Errorf("session %s not found", cmd.SessionID)
 		}
-		return nil, fmt.Errorf("connect: get session %s: %w", cmd.SessionID, err)
+		return nil, fmt.Errorf("start: get session %s: %w", cmd.SessionID, err)
 	}
 
 	if session.State == model.StatePlaying {
@@ -41,7 +41,16 @@ func (uc *Start) Execute(ctx context.Context, cmd *appPort.StartCommand) (*model
 
 	rng := rand.New(rand.NewSource(session.Params.Seed))
 	session.State = model.StatePlaying
-	uc.gameService.PrepareGame(session, rng)
+
+	if len(session.Players) == 1 {
+		session.AddBot()
+	}
+
+	uc.gameMechanics.Prepare(session, rng)
+	err = uc.gameMechanics.Advance(session)
+	if err != nil {
+		return nil, err
+	}
 
 	err = uc.sessionRepo.Save(ctx, session)
 	if err != nil {

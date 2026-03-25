@@ -1,9 +1,10 @@
 package model
 
 type Player struct {
-	UUID string
-	Name string
-	Mark Mark
+	UUID  string
+	Name  string
+	Mark  Mark
+	IsBot bool
 }
 
 func NewPlayer(UUID string, name string) *Player {
@@ -15,8 +16,9 @@ func NewPlayer(UUID string, name string) *Player {
 
 func (p *Player) Clone() *Player {
 	return &Player{
-		UUID: p.UUID,
-		Name: p.Name,
-		Mark: p.Mark,
+		UUID:  p.UUID,
+		Name:  p.Name,
+		Mark:  p.Mark,
+		IsBot: p.IsBot,
 	}
 }

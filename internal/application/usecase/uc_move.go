@@ -10,14 +10,14 @@ import (
 )
 
 type MakeMove struct {
-	sessionRepo appPort.SessionRepo
-	gameService servicePort.GameService
+	sessionRepo   appPort.SessionRepo
+	gameMechanics servicePort.GameMechanics
 }
 
-func NewMakeMove(sessionRepo appPort.SessionRepo, gameService servicePort.GameService) *MakeMove {
+func NewMakeMove(sessionRepo appPort.SessionRepo, gameMechanics servicePort.GameMechanics) *MakeMove {
 	return &MakeMove{
-		sessionRepo: sessionRepo,
-		gameService: gameService,
+		sessionRepo:   sessionRepo,
+		gameMechanics: gameMechanics,
 	}
 }
 
@@ -27,7 +27,7 @@ func (uc *MakeMove) Execute(ctx context.Context, cmd *appPort.MakeMoveCommand) (
 		if errors.Is(err, appPort.ErrSessionNotFound) {
 			return nil, fmt.Errorf("session %s not found", cmd.SessionID)
 		}
-		return nil, fmt.Errorf("connect: get session %s: %w", cmd.SessionID, err)
+		return nil, fmt.Errorf("move: get session %s: %w", cmd.SessionID, err)
 	}
 
 	if session.State != model.StatePlaying {
@@ -39,26 +39,24 @@ func (uc *MakeMove) Execute(ctx context.Context, cmd *appPort.MakeMoveCommand) (
 	}
 
 	player := session.GetTurnPlayer()
+	if player == nil {
+		return nil, fmt.Errorf("%w: session %s, player %s", model.ErrPlayerNotFound, session.UUID, cmd.PlayerID)
+	}
+
 	if player.UUID != cmd.PlayerID {
 		return nil, fmt.Errorf("%w: not player %s turn, session %s", appPort.ErrPlayerCantMakeMove, cmd.PlayerID, cmd.SessionID)
 	}
 
-	err = uc.gameService.MakeMovePlayer(session.Board, player, cmd.MarkPos)
+	err = uc.gameMechanics.MakeMove(session, player, cmd.MarkPos)
 	if err != nil {
 		return nil, err
 	}
-	session.Turn++
 
-	if len(session.Players) == 1 {
-		err = uc.gameService.MakeMoveBot(session.Board, -player.Mark)
-		session.Turn++
-	}
-
-	mark, state := uc.gameService.CheckWin(session.Board)
-	if state == model.StatePlaying && len(session.Players) == 1 {
-	} else if state == model.StateGameOver {
-		session.Winner = session.DetermineWinner(mark)
-		session.State = model.StateGameOver
+	if session.State == model.StatePlaying {
+		err = uc.gameMechanics.Advance(session)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = uc.sessionRepo.Save(ctx, session)
