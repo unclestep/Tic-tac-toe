@@ -27,7 +27,7 @@ To verify the server is running, try creating a game:
 ```bash
 curl -X POST http://localhost:8080/game/create \
      -H "Content-Type: application/json" \
-     -d '{"player_id": "uuid-player-1", "player_name": "player1", "rules": {"board_width": 3, "win_length": 3}, "seed": 0}'
+     -d '{"player_id": "uuid-player-1", "player_name": "player1", "rules": {"board_width": 3, "board_height": 3, "win_length": 3}, "seed": 0}'
 ```
 
 ## API Endpoints
