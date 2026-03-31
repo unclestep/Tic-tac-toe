@@ -4,7 +4,7 @@
 @player2 = uuid-player-2
 @playerName2 = player2
 
-# Create
+### Create Game
 # @name createGame
 POST {{baseUrl}}/game/create
 Content-Type: application/json
@@ -20,10 +20,8 @@ Content-Type: application/json
     "seed": 0
 }
 
-# Connect
-
+### Connect Player
 @sessionId = {{createGame.response.body.session_id}}
-
 POST {{baseUrl}}/game/{{sessionId}}/connect
 Content-Type: application/json
 
@@ -32,8 +30,7 @@ Content-Type: application/json
     "player_name": "{{playerName2}}"
 }
 
-# Start
-
+### Start Game
 POST {{baseUrl}}/game/{{sessionId}}/start
 Content-Type: application/json
 
@@ -41,8 +38,7 @@ Content-Type: application/json
     "player_id": "{{player1}}"
 }
 
-# Make a move
-
+### Make a move
 POST {{baseUrl}}/game/{{sessionId}}/move
 Content-Type: application/json
 
@@ -54,8 +50,7 @@ Content-Type: application/json
     }
 }
 
-# Disconnect
-
+### Disconnect Player
 POST {{baseUrl}}/game/{{sessionId}}/disconnect
 Content-Type: application/json
 
