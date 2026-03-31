@@ -1,0 +1,64 @@
+@baseUrl = http://localhost:8080
+@player1 = uuid-player-1
+@playerName1 = player1
+@player2 = uuid-player-2
+@playerName2 = player2
+
+# Create
+# @name createGame
+POST {{baseUrl}}/game/create
+Content-Type: application/json
+
+{
+    "player_id": "{{player1}}",
+    "player_name": "{{playerName1}}",
+    "rules": {
+        "board_width": 3,
+        "board_height": 3,
+        "win_length": 3
+    },
+    "seed": 0
+}
+
+# Connect
+
+@sessionId = {{createGame.response.body.session_id}}
+
+POST {{baseUrl}}/game/{{sessionId}}/connect
+Content-Type: application/json
+
+{
+    "player_id": "{{player2}}",
+    "player_name": "{{playerName2}}"
+}
+
+# Start
+
+POST {{baseUrl}}/game/{{sessionId}}/start
+Content-Type: application/json
+
+{
+    "player_id": "{{player1}}"
+}
+
+# Make a move
+
+POST {{baseUrl}}/game/{{sessionId}}/move
+Content-Type: application/json
+
+{
+    "player_id": "{{player1}}",
+    "mark_pos": {
+        "x": 1,
+        "y": 1
+    }
+}
+
+# Disconnect
+
+POST {{baseUrl}}/game/{{sessionId}}/disconnect
+Content-Type: application/json
+
+{
+    "player_id": "{{player1}}"
+}
