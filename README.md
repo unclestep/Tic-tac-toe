@@ -3,7 +3,7 @@
 Deployed application: [Tic-Tac-Toe on Railway.com](https://tic-tac-toe-production-5faf.up.railway.app)
 
 > **Note:** The root URL (`/`) returns 404 — this is expected, the API has no UI.
-> To interact with the API use `requests.http` or the curl examples below.
+> Use [Swagger UI](https://tic-tac-toe-production-5faf.up.railway.app/swagger/index.html) or `requests.http` to interact with the API.
 
 ## Getting Started
 
@@ -15,19 +15,24 @@ Deployed application: [Tic-Tac-Toe on Railway.com](https://tic-tac-toe-productio
    ```
    *The server will start on `http://localhost:8080`*
 
-2. **Send any request from `requests.http`**
+2. **Open Swagger UI:**
+   `http://localhost:8080/swagger/index.html`
 
 ## Testing the API
 
 `requests.http` file contains http-requests to server.
 
-### Option 1: VS Code
+### Option 1: Swagger UI (recommended)
+Open `http://localhost:8080/swagger/index.html` in your browser.
+All endpoints are documented and can be tested directly from the UI.
+
+### Option 2: VS Code
 1. Install the REST Client extension.
 2. Open `requests.http`.
 3. Click Send Request above any method.
    *Note: The `session_id` from the creation step is automatically captured and used in subsequent requests.*
 
-### Option 2: Curl
+### Option 3: Curl
 To verify the server is running, try creating a game:
 ```bash
 curl -X POST http://localhost:8080/game/create \
