@@ -45,7 +45,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/express_app:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/tic-tac-toe:latest
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max

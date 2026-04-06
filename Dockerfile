@@ -1,12 +1,16 @@
-FROM golang:latest AS builder
-WORKDIR /usr/src/app/
+FROM golang:latest AS build-stage
+WORKDIR /app/
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod download && \
+    go install github.com/swaggo/swag/cmd/swag@latest
 COPY . .
-RUN CGO_ENABLED=0 go build -o server ./cmd/main.go
+RUN swag init -g cmd/main.go && \
+    CGO_ENABLED=0 go build -o server ./cmd/main.go
 
-FROM alpine:latest
-WORKDIR /app
-COPY --from=builder /usr/src/app/server .
+FROM scratch
+COPY --from=build-stage /app/server /server
+COPY --from=build-stage /app/docs /docs/
+COPY --from=build-stage /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 EXPOSE 8080
-CMD ["./server"]
+USER 1001
+CMD ["/server"]
