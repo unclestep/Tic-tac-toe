@@ -9,6 +9,7 @@ on:
       - ".gitignore"
       - ".gitattributes"
       - "requests.http"
+      - "docs/"
 
 jobs:
   build-push-action:
@@ -16,6 +17,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6.0.2
+
+      - name: Swagger init
+        run: swag init -g cmd/main.go
 
       - name: Docker Setup Buildx
         uses: docker/setup-buildx-action@v4.0.0

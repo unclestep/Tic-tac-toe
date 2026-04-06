@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/delivery/http/json/mapper"
@@ -18,6 +19,14 @@ func NewConnectHandler(uc port.ConnectUseCase) *ConnectHandler {
 	}
 }
 
+// @Summary     Connect a Player
+// @Tags        game
+// @Param  session_id  path  string  true  "Session ID"
+// @Param       body       body     dto.ConnectRequest true "Player's data"
+// @Success     200        {object} dto.SessionResponse
+// @Failure     400        {object} dto.ErrorResponse
+// @Failure     500        {object} dto.ErrorResponse
+// @Router      /game/{session_id}/connect [post]
 func (h *ConnectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req dto.ConnectRequest
 

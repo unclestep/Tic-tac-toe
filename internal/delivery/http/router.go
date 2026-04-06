@@ -2,6 +2,8 @@ package http
 
 import (
 	"net/http"
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Router struct {
@@ -25,6 +27,10 @@ func NewRouter(create http.Handler, connect http.Handler, start http.Handler, mo
 func (r *Router) Handler() http.Handler {
 	mux := http.NewServeMux()
 
+	// Swagger UI
+	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+
+	// API
 	mux.Handle("POST /game/create", r.create)
 	mux.Handle("POST /game/{uuid}/connect", r.connect)
 	mux.Handle("POST /game/{uuid}/start", r.start)

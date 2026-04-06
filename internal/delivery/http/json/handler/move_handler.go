@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/delivery/http/json/mapper"
@@ -18,6 +19,14 @@ func NewMakeMoveHandler(uc port.MakeMoveUseCase) *MakeMoveHandler {
 	}
 }
 
+// @Summary     Make a Move
+// @Tags        game
+// @Param  session_id  path  string  true  "Session ID"
+// @Param       body       body     dto.MakeMoveRequest true "Move data"
+// @Success     200        {object} dto.SessionResponse
+// @Failure     400        {object} dto.ErrorResponse
+// @Failure     500        {object} dto.ErrorResponse
+// @Router      /game/{session_id}/move [post]
 func (h *MakeMoveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req dto.MakeMoveRequest
 
