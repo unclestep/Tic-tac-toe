@@ -1,4 +1,4 @@
-name: Deploy to Railway
+name: Tic-tac-toe actions
 
 on:
   push:
@@ -29,14 +29,15 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/express_app:latest
           platforms: linux/amd64, linux/arm64
 
-    deploy:
+  deploy:
     needs: build-push-action
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - run: railway redeploy --service Tic-tac-toe --yes
+      - name: Deploy to Railway
+        run: railway redeploy --service Tic-tac-toe --yes
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
