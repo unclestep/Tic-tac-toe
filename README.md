@@ -1,5 +1,10 @@
 # Tic-Tac-Toe REST API
 
+Deployed application: [Tic-Tac-Toe on Railway.com](https://tic-tac-toe-production-5faf.up.railway.app)
+
+> **Note:** The root URL (`/`) returns 404 — this is expected, the API has no UI.
+> To interact with the API use `requests.http` or the curl examples below.
+
 ## Getting Started
 
 **Prerequisites:** Go 1.26+
