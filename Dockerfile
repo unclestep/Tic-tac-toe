@@ -1,14 +1,12 @@
-FROM golang:latest
-
+FROM golang:latest AS builder
 WORKDIR /usr/src/app/
-
 COPY go.mod go.sum ./
-
 RUN go mod download
-
 COPY . .
-
 RUN go build -o server ./cmd/main.go
-EXPOSE 8080
 
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /usr/src/app/server .
+EXPOSE 8080
 CMD ["./server"]
