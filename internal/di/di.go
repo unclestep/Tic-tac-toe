@@ -2,13 +2,14 @@ package di
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"go.uber.org/fx"
 
 	"tictactoe/internal/application/port"
-	appPort "tictactoe/internal/application/port"
 	"tictactoe/internal/application/usecase"
 	httpRouter "tictactoe/internal/delivery/http"
 	"tictactoe/internal/delivery/http/json/handler"
@@ -44,13 +45,13 @@ var infraModule = fx.Options(
 	fx.Provide(
 		fx.Annotate(
 			repository.NewSessionRepo,
-			fx.As(new(appPort.SessionRepo)),
+			fx.As(new(port.SessionRepo)),
 		),
 	),
 	fx.Provide(
 		fx.Annotate(
 			repository.NewRulesRepo,
-			fx.As(new(appPort.RulesRepo)),
+			fx.As(new(port.RulesRepo)),
 		),
 	),
 )
@@ -158,7 +159,11 @@ func startServer(lc fx.Lifecycle, router *httpRouter.Router) {
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			go srv.ListenAndServe()
+			go func() {
+				if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					log.Fatal(err)
+				}
+			}()
 			fmt.Println("Server started on :8080")
 			return nil
 		},

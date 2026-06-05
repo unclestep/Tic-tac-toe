@@ -23,6 +23,7 @@ const (
 	StateLobby State = iota
 	StatePlaying
 	StateGameOver
+	StateUnknown
 )
 
 type SessionParams struct {

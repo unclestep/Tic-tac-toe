@@ -2,13 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
 	"tictactoe/internal/infrastructure/storage/mapper"
 	storagePort "tictactoe/internal/infrastructure/storage/port"
-
-	"github.com/google/uuid"
 )
 
 type SessionRepo struct {
@@ -24,38 +23,34 @@ func NewSessionRepo(ds storagePort.SessionDataSource) *SessionRepo {
 func (r *SessionRepo) Get(ctx context.Context, id string) (*model.Session, error) {
 	record, err := r.ds.Fetch(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", port.ErrSessionNotFound, id)
+		if errors.Is(err, port.ErrSessionNotFound) {
+			return nil, fmt.Errorf("get session: %w", port.ErrSessionNotFound)
+		}
+		return nil, fmt.Errorf("get session: %w", err)
 	}
-	return mapper.ToSessionDomain(record), nil
+	dsession, err := mapper.ToSessionDomain(record)
+	if err != nil {
+		return nil, fmt.Errorf("get session: %w", err)
+	}
+	return dsession, nil
 }
 
 func (r *SessionRepo) Save(ctx context.Context, session *model.Session) error {
 	if session == nil {
-		return fmt.Errorf("%w: given session is nil", port.ErrSessionNotSaved)
+		return fmt.Errorf("save session: session is nil")
 	}
-
 	if session.UUID == "" {
-		session.UUID = uuid.New().String()
+		return fmt.Errorf("save session: empty uuid")
 	}
-
-	return r.ds.Store(ctx, mapper.ToSessionRecord(session))
-}
-
-func (r *SessionRepo) Create(ctx context.Context, params *model.SessionParams, rules *model.Rules) (*model.Session, error) {
-	id := uuid.New().String()
-	session, err := model.NewSession(id, params, rules)
-
-	if err != nil {
-		return nil, err
+	if err := r.ds.Store(ctx, mapper.ToSessionStorage(session)); err != nil {
+		return fmt.Errorf("save session: %w", err)
 	}
-
-	if err = r.ds.Store(ctx, mapper.ToSessionRecord(session)); err != nil {
-		return nil, err
-	}
-
-	return session, nil
+	return nil
 }
 
 func (r *SessionRepo) Delete(ctx context.Context, id string) error {
-	return r.ds.Delete(ctx, id)
+	if err := r.ds.Delete(ctx, id); err != nil {
+		return fmt.Errorf("delete session: %w", err)
+	}
+	return nil
 }
