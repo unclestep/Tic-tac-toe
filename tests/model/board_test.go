@@ -48,7 +48,7 @@ func TestNewBoardValid(t *testing.T) {
 		for y := 0; y < 3; y++ {
 			mark, err := b.GetMark(geometry.NewPoint(x, y))
 			require.NoError(t, err)
-			assert.Equal(t, model.Empty, mark)
+			assert.Equal(t, model.MarkEmpty, mark)
 		}
 	}
 }
@@ -78,7 +78,7 @@ func TestNewBoardFromCellsWrongSize(t *testing.T) {
 }
 
 func TestNewBoardFromCellsValid(t *testing.T) {
-	cells := []model.Mark{model.X, model.O, model.O, model.X}
+	cells := []model.Mark{model.MarkX, model.MarkO, model.MarkO, model.MarkX}
 
 	b := model.NewBoardFromCells(2, 2, cells)
 	require.NotNil(t, b)
@@ -90,10 +90,10 @@ func TestNewBoardFromCellsValid(t *testing.T) {
 		p    geometry.Point
 		mark model.Mark
 	}{
-		{geometry.NewPoint(0, 0), model.X},
-		{geometry.NewPoint(1, 0), model.O},
-		{geometry.NewPoint(0, 1), model.O},
-		{geometry.NewPoint(1, 1), model.X},
+		{geometry.NewPoint(0, 0), model.MarkX},
+		{geometry.NewPoint(1, 0), model.MarkO},
+		{geometry.NewPoint(0, 1), model.MarkO},
+		{geometry.NewPoint(1, 1), model.MarkX},
 	}
 
 	for _, tc := range expected {
@@ -106,7 +106,7 @@ func TestNewBoardFromCellsValid(t *testing.T) {
 func TestCloneAllSame(t *testing.T) {
 	original := newBoard(t, 3, 3)
 	p := geometry.NewPoint(1, 1)
-	require.NoError(t, original.SetMark(model.X, p))
+	require.NoError(t, original.SetMark(model.MarkX, p))
 
 	clone := original.Clone()
 
@@ -116,20 +116,20 @@ func TestCloneAllSame(t *testing.T) {
 func TestCloneMutationDoesNotAffectOriginal(t *testing.T) {
 	original := newBoard(t, 3, 3)
 	p := geometry.NewPoint(0, 0)
-	require.NoError(t, original.SetMark(model.X, p))
+	require.NoError(t, original.SetMark(model.MarkX, p))
 
 	clone := original.Clone()
-	require.NoError(t, clone.SetMark(model.O, p))
+	require.NoError(t, clone.SetMark(model.MarkO, p))
 
 	mark, err := original.GetMark(p)
 	require.NoError(t, err)
-	assert.Equal(t, model.X, mark)
+	assert.Equal(t, model.MarkX, mark)
 }
 
 func TestClearAllCellsBecomeEmpty(t *testing.T) {
 	b := newBoard(t, 3, 3)
-	require.NoError(t, b.SetMark(model.X, geometry.NewPoint(0, 0)))
-	require.NoError(t, b.SetMark(model.O, geometry.NewPoint(2, 2)))
+	require.NoError(t, b.SetMark(model.MarkX, geometry.NewPoint(0, 0)))
+	require.NoError(t, b.SetMark(model.MarkO, geometry.NewPoint(2, 2)))
 
 	b.Clear()
 
@@ -137,7 +137,7 @@ func TestClearAllCellsBecomeEmpty(t *testing.T) {
 		for y := 0; y < 3; y++ {
 			mark, err := b.GetMark(geometry.NewPoint(x, y))
 			require.NoError(t, err)
-			assert.Equal(t, model.Empty, mark, "cell (%d,%d) must be empty after Clear", x, y)
+			assert.Equal(t, model.MarkEmpty, mark, "cell (%d,%d) must be empty after Clear", x, y)
 		}
 	}
 }
@@ -145,14 +145,14 @@ func TestClearAllCellsBecomeEmpty(t *testing.T) {
 func TestClearMarkValidPointWithMark(t *testing.T) {
 	b := newBoard(t, 3, 3)
 	p := geometry.NewPoint(1, 1)
-	require.NoError(t, b.SetMark(model.X, p))
+	require.NoError(t, b.SetMark(model.MarkX, p))
 
 	err := b.ClearMark(p)
 	require.NoError(t, err)
 
 	mark, err := b.GetMark(p)
 	require.NoError(t, err)
-	assert.Equal(t, model.Empty, mark)
+	assert.Equal(t, model.MarkEmpty, mark)
 }
 
 func TestClearMarkValidPointAlreadyEmpty(t *testing.T) {
@@ -164,7 +164,7 @@ func TestClearMarkValidPointAlreadyEmpty(t *testing.T) {
 
 	mark, err := b.GetMark(p)
 	require.NoError(t, err)
-	assert.Equal(t, model.Empty, mark)
+	assert.Equal(t, model.MarkEmpty, mark)
 }
 
 func TestClearMarkOutOfBounds(t *testing.T) {
@@ -178,8 +178,8 @@ func TestSetMarkValid(t *testing.T) {
 		name string
 		mark model.Mark
 	}{
-		{"X", model.X},
-		{"O", model.O},
+		{"X", model.MarkX},
+		{"O", model.MarkO},
 	}
 
 	for _, tc := range cases {
@@ -202,7 +202,7 @@ func TestSetMarkInvalidMark(t *testing.T) {
 		name string
 		mark model.Mark
 	}{
-		{"empty mark", model.Empty},
+		{"empty mark", model.MarkEmpty},
 		{"arbitrary positive", model.Mark(2)},
 		{"arbitrary negative", model.Mark(-2)},
 	}
@@ -219,7 +219,7 @@ func TestSetMarkInvalidMark(t *testing.T) {
 
 func TestSetMarkOutOfBounds(t *testing.T) {
 	b := newBoard(t, 3, 3)
-	err := b.SetMark(model.X, geometry.NewPoint(5, 5))
+	err := b.SetMark(model.MarkX, geometry.NewPoint(5, 5))
 	assert.ErrorIs(t, err, model.ErrOutOfBounds)
 }
 
@@ -233,10 +233,10 @@ func TestGetEmptyCellsEmptyBoard(t *testing.T) {
 
 func TestGetEmptyCellsFullBoard(t *testing.T) {
 	b := newBoard(t, 2, 2)
-	require.NoError(t, b.SetMark(model.X, geometry.NewPoint(0, 0)))
-	require.NoError(t, b.SetMark(model.O, geometry.NewPoint(1, 0)))
-	require.NoError(t, b.SetMark(model.X, geometry.NewPoint(0, 1)))
-	require.NoError(t, b.SetMark(model.O, geometry.NewPoint(1, 1)))
+	require.NoError(t, b.SetMark(model.MarkX, geometry.NewPoint(0, 0)))
+	require.NoError(t, b.SetMark(model.MarkO, geometry.NewPoint(1, 0)))
+	require.NoError(t, b.SetMark(model.MarkX, geometry.NewPoint(0, 1)))
+	require.NoError(t, b.SetMark(model.MarkO, geometry.NewPoint(1, 1)))
 
 	empty := b.GetEmptyCells()
 	assert.Empty(t, empty)
@@ -244,8 +244,8 @@ func TestGetEmptyCellsFullBoard(t *testing.T) {
 
 func TestGetEmptyCellsPartialBoard(t *testing.T) {
 	b := newBoard(t, 3, 3)
-	require.NoError(t, b.SetMark(model.X, geometry.NewPoint(0, 0)))
-	require.NoError(t, b.SetMark(model.O, geometry.NewPoint(2, 2)))
+	require.NoError(t, b.SetMark(model.MarkX, geometry.NewPoint(0, 0)))
+	require.NoError(t, b.SetMark(model.MarkO, geometry.NewPoint(2, 2)))
 
 	empty := b.GetEmptyCells()
 	assert.Len(t, empty, 7)
@@ -255,7 +255,7 @@ func TestGetEmptyCellsPartialBoard(t *testing.T) {
 
 func TestGetEmptyCellsCorrectCoordinates(t *testing.T) {
 	b := newBoard(t, 2, 3)
-	require.NoError(t, b.SetMark(model.X, geometry.NewPoint(0, 0)))
+	require.NoError(t, b.SetMark(model.MarkX, geometry.NewPoint(0, 0)))
 
 	empty := b.GetEmptyCells()
 
@@ -285,10 +285,10 @@ func TestGetMarkCornerCells(t *testing.T) {
 		p    geometry.Point
 		mark model.Mark
 	}{
-		{"top-left", geometry.NewPoint(0, 0), model.X},
-		{"top-right", geometry.NewPoint(width-1, 0), model.O},
-		{"bottom-left", geometry.NewPoint(0, height-1), model.X},
-		{"bottom-right", geometry.NewPoint(width-1, height-1), model.O},
+		{"top-left", geometry.NewPoint(0, 0), model.MarkX},
+		{"top-right", geometry.NewPoint(width-1, 0), model.MarkO},
+		{"bottom-left", geometry.NewPoint(0, height-1), model.MarkX},
+		{"bottom-right", geometry.NewPoint(width-1, height-1), model.MarkO},
 	}
 
 	for _, tc := range corners {
@@ -341,9 +341,9 @@ func TestIsValidMark(t *testing.T) {
 		mark     model.Mark
 		expected bool
 	}{
-		{"X", model.X, true},
-		{"O", model.O, true},
-		{"Empty", model.Empty, false},
+		{"X", model.MarkX, true},
+		{"O", model.MarkO, true},
+		{"Empty", model.MarkEmpty, false},
 		{"arbitrary positive", model.Mark(2), false},
 		{"arbitrary negative", model.Mark(-2), false},
 	}

@@ -19,4 +19,4 @@ func TestRulesClone(t *testing.T) {
 
 	clone.UUID = "b"
 	assert.NotEqual(t, clone.UUID, original.UUID)
-
+}

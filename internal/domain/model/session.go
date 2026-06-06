@@ -10,7 +10,6 @@ type Session struct {
 	RulesID string
 	Board   *Board
 	Players []*Player
-	Bots    int
 	Turn    int
 	Winner  string
 	State   State
@@ -31,40 +30,21 @@ type SessionParams struct {
 }
 
 var (
-	ErrPlayerNotFound      = errors.New("player not found")
-	ErrPlayerAlreadyExists = errors.New("player already exists")
-	ErrCantCreateSession   = errors.New("cant create session")
-	ErrSessionFull         = errors.New("session is full")
-	ErrGameAlreadyOver     = errors.New("game is already over")
+	ErrPlayerNotFound = errors.New("player not found")
+	ErrPlayerExists   = errors.New("player already exists")
+	ErrSessionFull    = errors.New("session is full")
+	ErrMarkTaken      = errors.New("mark is taken")
 )
 
-func NewSession(sessionUUID string, params *SessionParams, rules *Rules) (*Session, error) {
-	if sessionUUID == "" {
-		return nil, fmt.Errorf("%w: session id is invalid", ErrCantCreateSession)
-	}
-	if params == nil {
-		return nil, fmt.Errorf("%w: params is nil", ErrCantCreateSession)
-	}
-	if rules == nil {
-		return nil, fmt.Errorf("%w: rules is nil", ErrCantCreateSession)
-	}
-	if rules.UUID == "" {
-		return nil, fmt.Errorf("%w: rules have invalid id", ErrCantCreateSession)
-	}
-
-	board, err := NewBoard(rules.BoardWidth, rules.BoardHeight)
-	if err != nil {
-		return nil, err
-	}
-
+func NewSession(sessionUUID string, params *SessionParams, rules *Rules) *Session {
 	return &Session{
 		UUID:    sessionUUID,
 		RulesID: rules.UUID,
-		Board:   board,
+		Board:   NewBoard(rules.BoardWidth, rules.BoardHeight),
 		Players: make([]*Player, 0, 2),
 		State:   StateLobby,
 		Params:  params,
-	}, nil
+	}
 }
 
 func (s *Session) Clone() *Session {
@@ -92,112 +72,59 @@ func (s *Session) ClonePlayers() []*Player {
 
 func (s *Session) IsPlayerExist(playerUUID string) bool {
 	for _, player := range s.Players {
-		if player.UUID == playerUUID && !player.IsBot {
+		if player.UUID == playerUUID {
 			return true
 		}
 	}
 	return false
 }
 
-const (
-	BotUUID = "BotUUID"
-	BotName = "Bot"
-)
-
-func (s *Session) AddBot() {
-	bot := NewPlayer(BotUUID, BotName)
-	bot.IsBot = true
-	s.Bots++
-	s.Players = append(s.Players, bot)
+func (s *Session) IsFull() bool {
+	return len(s.Players) == 2
 }
 
-func (s *Session) AddPlayer(playerUUID, playerName string) error {
-	var bot *Player
-	for _, player := range s.Players {
-		if player.UUID == playerUUID && player.IsBot {
-			player.IsBot = false
-			s.Bots--
-			return nil
-		} else if player.UUID == playerUUID {
-			return fmt.Errorf("%w: session %s, player %s", ErrPlayerAlreadyExists, s.UUID, playerUUID)
-		} else if player.IsBot {
-			bot = player
-		}
-	}
-
-	if len(s.Players)-s.Bots >= 2 {
-		return fmt.Errorf("%w: session %s", ErrSessionFull, s.UUID)
-	}
-
-	if bot != nil {
-		bot.UUID = playerUUID
-		bot.Name = playerName
-		bot.IsBot = false
-		s.Bots--
-		return nil
-	}
-
-	player := NewPlayer(playerUUID, playerName)
+func (s *Session) GetAvailableMarks() []Mark {
 	if len(s.Players) == 0 {
-		player.Mark = X
-	} else {
-		player.Mark = O
+		return []Mark{MarkX, MarkO}
+	} else if len(s.Players) == 2 {
+		return []Mark{}
+	}
+	return []Mark{s.Players[0].Mark.Opposite()}
+}
+
+func (s *Session) AddPlayer(player *Player) error {
+	if s.IsFull() {
+		return fmt.Errorf("add player: %w", ErrSessionFull)
+	}
+	for _, p := range s.Players {
+		if p.UUID == player.UUID {
+			return fmt.Errorf("add player: %w", ErrPlayerExists)
+		}
+		if p.Mark == player.Mark {
+			return fmt.Errorf("add player: %w", ErrMarkTaken)
+		}
 	}
 	s.Players = append(s.Players, player)
-
 	return nil
 }
 
-func (s *Session) HidePlayer(id string) error {
-	for _, player := range s.Players {
-		if player.UUID == id {
-			if player.IsBot {
-				break
+func (s *Session) RemovePlayer(UUID string) error {
+	for i, player := range s.Players {
+		if player.UUID == UUID {
+			if i == 0 {
+				s.Players = s.Players[1:]
+			} else {
+				s.Players = s.Players[:1]
 			}
-			player.IsBot = true
-			s.Bots++
 			return nil
 		}
 	}
-
-	return fmt.Errorf("%w: player %v", ErrPlayerNotFound, id)
+	return fmt.Errorf("remove player (session %s, player %s): %w", s.UUID, UUID, ErrPlayerNotFound)
 }
 
-func (s *Session) RemovePlayer(playerUUID string) error {
-	removeInd := -1
-	for i, player := range s.Players {
-		if player.UUID == playerUUID {
-			removeInd = i
-			break
-		}
-	}
-	if removeInd == -1 {
-		return fmt.Errorf("%w: session %s, player %s", ErrPlayerNotFound, s.UUID, playerUUID)
-	}
-
-	last := len(s.Players) - 1
-	s.Players[removeInd] = s.Players[last]
-	s.Players = s.Players[:last]
-	return nil
-}
-
-func (s *Session) GetTurnPlayer() *Player {
+func (s *Session) GetTurnPlayer() (*Player, error) {
 	if len(s.Players) == 0 {
-		return nil
+		return nil, fmt.Errorf("get turn player: %w", ErrPlayerNotFound)
 	}
-	return s.Players[s.Turn%len(s.Players)]
-}
-
-func (s *Session) DetermineWinner(mark Mark) string {
-	if mark == Empty {
-		return "Draw"
-	}
-
-	for _, player := range s.Players {
-		if player.Mark == mark {
-			return player.Name
-		}
-	}
-
-	return "Bot"
+	return s.Players[s.Turn%len(s.Players)], nil
 }
