@@ -8,9 +8,7 @@ import (
 )
 
 var (
-	ErrInvalidConstructorArgs = errors.New("invalid board constructor args")
-	ErrSetPointOutOfBounds    = errors.New("set point is out of bounds")
-	ErrInvalidMark            = errors.New("invalid mark")
+	ErrOutOfBounds = errors.New("point out of bounds")
 )
 
 type Board struct {
@@ -27,20 +25,20 @@ const (
 	O     Mark = -1
 )
 
-func NewBoard(width, height int) (*Board, error) {
+func NewBoard(width, height int) *Board {
 	if width <= 0 || height <= 0 {
-		return nil, fmt.Errorf("%w: width %v, height %v", ErrInvalidConstructorArgs, width, height)
+		panic(fmt.Sprintf("new board: invalid dimensions %dx%d", width, height))
 	}
 	return &Board{
 		Width:  width,
 		Height: height,
 		cells:  make([]Mark, width*height),
-	}, nil
+	}
 }
 
 func NewBoardFromCells(width, height int, cells []Mark) *Board {
 	if len(cells) != width*height {
-		return nil
+		panic(fmt.Sprintf("new board from cells: mismatched dimensions %dx%d with cells", width, height))
 	}
 
 	return &Board{
@@ -68,18 +66,18 @@ func (b *Board) Clear() {
 
 func (b *Board) ClearMark(p geometry.Point) error {
 	if !b.InBounds(p) {
-		return fmt.Errorf("%w: point %v, board width %v, board height %v", ErrSetPointOutOfBounds, p, b.Width, b.Height)
+		return fmt.Errorf("clear mark: %w, with point %v, board width %v, board height %v", ErrOutOfBounds, p, b.Width, b.Height)
 	}
 	b.cells[b.Width*p.Y+p.X] = Empty
 	return nil
 }
 
 func (b *Board) SetMark(m Mark, p geometry.Point) error {
-	if !b.InBounds(p) {
-		return fmt.Errorf("%w: point %v, board width %v, board height %v", ErrSetPointOutOfBounds, p, b.Width, b.Height)
-	}
 	if !b.IsValidMark(m) {
-		return fmt.Errorf("%w: given mark %v, valid: %v, %v", ErrInvalidMark, m, X, O)
+		panic(fmt.Sprintf("set mark: invalid mark %v", m))
+	}
+	if !b.InBounds(p) {
+		return fmt.Errorf("set mark: %w with point %v, board width %v, board height %v", ErrOutOfBounds, p, b.Width, b.Height)
 	}
 	b.cells[b.Width*p.Y+p.X] = m
 	return nil
@@ -96,11 +94,11 @@ func (b *Board) GetEmptyCells() []geometry.Point {
 	return emptyCells
 }
 
-func (b *Board) GetMark(p geometry.Point) Mark {
+func (b *Board) GetMark(p geometry.Point) (Mark, error) {
 	if !b.InBounds(p) {
-		return Empty
+		return Empty, fmt.Errorf("get mark: %w, with point %v", ErrOutOfBounds, p)
 	}
-	return b.cells[b.Width*p.Y+p.X]
+	return b.cells[b.Width*p.Y+p.X], nil
 }
 
 func (b *Board) InBounds(p geometry.Point) bool {
