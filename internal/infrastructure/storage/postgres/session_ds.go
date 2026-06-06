@@ -11,22 +11,22 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type SessionDataSource struct {
-	pool *pgxpool.Pool
+	dbtx DBTX
 }
 
-func NewSessionDataSource(pool *pgxpool.Pool) *SessionDataSource {
+func NewSessionDataSource(dbtx DBTX) *SessionDataSource {
 	return &SessionDataSource{
-		pool: pool,
+		dbtx: dbtx,
 	}
 }
 
 func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmodel.SessionRecord, error) {
 	sessionSQL := `
-		SELECT s.uuid, s.rules_id, s.board, s.bots, turn, winner, state, seed
+		SELECT uuid, rules_uuid, board, bots, turn, winner, state, seed
 		FROM sessions
 		WHERE uuid = $1
 	`
@@ -36,7 +36,7 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 
 	var sr dsmodel.SessionRecord
 	var binBoard []byte
-	err := ds.pool.QueryRow(ctx, sessionSQL, uuid).Scan(&sr.UUID, &sr.RulesUUID, &binBoard, &sr.Bots, &sr.Turn, &sr.Winner, &sr.State, &sr.Seed)
+	err := ds.dbtx.QueryRow(ctx, sessionSQL, uuid).Scan(&sr.UUID, &sr.RulesUUID, &binBoard, &sr.Bots, &sr.Turn, &sr.Winner, &sr.State, &sr.Seed)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("fetch: %w", port.ErrSessionNotFound)
@@ -54,7 +54,7 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 		WHERE session_uuid = $1
 	`
 
-	rows, err := ds.pool.Query(ctx, playersSQL, uuid)
+	rows, err := ds.dbtx.Query(ctx, playersSQL, uuid)
 	if err != nil {
 		return nil, fmt.Errorf("fetch: query players: %w", err)
 	}
@@ -78,7 +78,7 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 
 func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.SessionRecord) error {
 	sessionSQL := `
-		INSERT INTO sessions (uuid, rules_id, board, bots, turn, winner, state, seed)
+		INSERT INTO sessions (uuid, rules_uuid, board, bots, turn, winner, state, seed)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT(uuid) DO UPDATE
 		SET board = EXCLUDED.board,
@@ -89,8 +89,8 @@ func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.Sess
 			seed = EXCLUDED.seed
 	`
 
-	if session.Board == nil {
-		return fmt.Errorf("store: board is nil")
+	if session.Board == nil || len(session.Board.Cells) == 0 {
+		return fmt.Errorf("store: board is empty")
 	}
 
 	binBoard, err := json.Marshal(session.Board)
@@ -101,20 +101,28 @@ func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.Sess
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	_, err = ds.pool.Exec(ctx, sessionSQL,
+	_, err = ds.dbtx.Exec(ctx, sessionSQL,
 		session.UUID, session.RulesUUID, binBoard, session.Bots,
 		session.Turn, session.Winner, session.State, session.Seed,
 	)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+		return fmt.Errorf("store: %w", port.ErrRulesNotFound)
+	}
 	if err != nil {
 		return fmt.Errorf("store: session insert: %w", err)
+	}
+
+	if len(session.Players) == 0 {
+		return nil
 	}
 
 	playerSQL := `
 		INSERT INTO players (uuid, session_uuid, name, mark, bot)
 		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT(uuid) DO UPDATE
-		SET name = EXCLUDED.name,
-			mark = EXCLUDED.mark,
+		ON CONFLICT(session_uuid, mark) DO UPDATE
+		SET uuid = EXCLUDED.uuid,
+			name = EXCLUDED.name,
 			bot = EXCLUDED.bot
 	`
 
@@ -123,7 +131,7 @@ func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.Sess
 		batch.Queue(playerSQL, player.UUID, session.UUID, player.Name, player.Mark, player.Bot)
 	}
 
-	br := ds.pool.SendBatch(ctx, batch)
+	br := ds.dbtx.SendBatch(ctx, batch)
 	defer func() { _ = br.Close() }()
 
 	for range session.Players {
@@ -143,7 +151,7 @@ func (ds *SessionDataSource) Delete(parent context.Context, UUID string) error {
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	_, err := ds.pool.Exec(ctx, sql, UUID)
+	_, err := ds.dbtx.Exec(ctx, sql, UUID)
 	if err != nil {
 		return fmt.Errorf("delete: exec: %w", err)
 	}

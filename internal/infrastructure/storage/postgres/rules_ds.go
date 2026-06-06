@@ -8,17 +8,16 @@ import (
 	dsmodel "tictactoe/internal/infrastructure/storage/model"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
 )
 
 type RulesDataSource struct {
-	pool *pgxpool.Pool
+	dbtx DBTX
 }
 
-func NewPostgresRulesDataSource(pool *pgxpool.Pool) *RulesDataSource {
+func NewRulesDataSource(dbtx DBTX) *RulesDataSource {
 	return &RulesDataSource{
-		pool: pool,
+		dbtx: dbtx,
 	}
 }
 
@@ -32,7 +31,7 @@ func (ds *RulesDataSource) Fetch(parent context.Context, uuid string) (*dsmodel.
 	defer cancel()
 
 	var rulesRecord dsmodel.RulesRecord
-	err := ds.pool.QueryRow(ctx, sql, uuid).Scan(&rulesRecord.UUID, &rulesRecord.BoardWidth, &rulesRecord.BoardHeight, &rulesRecord.WinLength)
+	err := ds.dbtx.QueryRow(ctx, sql, uuid).Scan(&rulesRecord.UUID, &rulesRecord.BoardWidth, &rulesRecord.BoardHeight, &rulesRecord.WinLength)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("fetch: %w", port.ErrRulesNotFound)
@@ -53,7 +52,7 @@ func (ds *RulesDataSource) Store(parent context.Context, record *dsmodel.RulesRe
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	_, err := ds.pool.Exec(ctx, sql, record.UUID, record.BoardWidth, record.BoardHeight, record.WinLength)
+	_, err := ds.dbtx.Exec(ctx, sql, record.UUID, record.BoardWidth, record.BoardHeight, record.WinLength)
 	if err != nil {
 		return fmt.Errorf("store: exec: %w", err)
 	}
@@ -68,7 +67,7 @@ func (ds *RulesDataSource) Delete(parent context.Context, uuid string) error {
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	_, err := ds.pool.Exec(ctx, sql, uuid)
+	_, err := ds.dbtx.Exec(ctx, sql, uuid)
 	if err != nil {
 		return fmt.Errorf("delete: exec: %w", err)
 	}
