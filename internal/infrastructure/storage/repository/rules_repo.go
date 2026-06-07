@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
 	"tictactoe/internal/infrastructure/storage/mapper"
 	storagePort "tictactoe/internal/infrastructure/storage/port"
@@ -23,9 +21,6 @@ func NewRulesRepo(ds storagePort.RulesDataSource) *RulesRepo {
 func (r *RulesRepo) Get(ctx context.Context, id string) (*model.Rules, error) {
 	record, err := r.ds.Fetch(ctx, id)
 	if err != nil {
-		if errors.Is(err, port.ErrRulesNotFound) {
-			return nil, fmt.Errorf("get rules: %w", port.ErrRulesNotFound)
-		}
 		return nil, fmt.Errorf("get rules: %w", err)
 	}
 	return mapper.ToRulesDomain(record), nil

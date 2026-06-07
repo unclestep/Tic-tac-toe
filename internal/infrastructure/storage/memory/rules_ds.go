@@ -13,7 +13,7 @@ type RulesDataSource struct {
 	mu    sync.RWMutex
 }
 
-func NewMemoryRulesDataSource() *RulesDataSource {
+func NewRulesDataSource() *RulesDataSource {
 	return &RulesDataSource{
 		rules: make(map[string]*dsmodel.RulesRecord),
 	}

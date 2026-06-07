@@ -11,11 +11,13 @@ import (
 
 type MakeMoveHandler struct {
 	uc port.MakeMoveUseCase
+	em *ErrorMapper
 }
 
-func NewMakeMoveHandler(uc port.MakeMoveUseCase) *MakeMoveHandler {
+func NewMakeMoveHandler(uc port.MakeMoveUseCase, em *ErrorMapper) *MakeMoveHandler {
 	return &MakeMoveHandler{
 		uc: uc,
+		em: em,
 	}
 }
 
@@ -39,7 +41,7 @@ func (h *MakeMoveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.uc.Execute(r.Context(), cmd)
 	if err != nil {
-		writeError(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, err.Error(), h.em.Status(err))
 		return
 	}
 

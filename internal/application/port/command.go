@@ -6,30 +6,27 @@ import (
 )
 
 type CreateCommand struct {
-	PlayerID      string
-	PlayerName    string
 	Rules         *model.Rules
 	SessionParams *model.SessionParams
 }
 
 type ConnectCommand struct {
-	SessionID  string
-	PlayerID   string
-	PlayerName string
+	SessionUUID string
+	PlayerName  string
 }
 
 type StartCommand struct {
-	SessionID string
-	PlayerID  string
+	SessionUUID string
+	PlayerUUID  string
 }
 
 type MakeMoveCommand struct {
-	SessionID string
-	PlayerID  string
-	MarkPos   geometry.Point
+	SessionUUID string
+	PlayerUUID  string
+	MarkPos     geometry.Point
 }
 
 type DisconnectCommand struct {
-	SessionID string
-	PlayerID  string
+	SessionUUID string
+	PlayerUUID  string
 }

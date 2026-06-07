@@ -6,17 +6,17 @@ import (
 	"tictactoe/pkg/geometry"
 )
 
-type Movement struct {
+type HumanMovement struct {
 	winChecker *WinChecker
 }
 
-func NewMovementService(winChecker *WinChecker) *Movement {
-	return &Movement{
+func NewHumanMovement(winChecker *WinChecker) *HumanMovement {
+	return &HumanMovement{
 		winChecker: winChecker,
 	}
 }
 
-func (m *Movement) Make(session *model.Session, player *model.Player, p geometry.Point) error {
+func (m *HumanMovement) MakeMove(session *model.Session, player *model.Player, p geometry.Point) error {
 	if session.State == model.StateGameOver {
 		return fmt.Errorf("make a move (session UUID %s): %w", session.UUID, model.ErrGameAlreadyOver)
 	}
@@ -24,7 +24,7 @@ func (m *Movement) Make(session *model.Session, player *model.Player, p geometry
 		return fmt.Errorf("make a move (player UUID %s, point %v): %w", player.UUID, p, err)
 	}
 
-	mark, state := m.winChecker.CheckWin(session.Board)
+	mark, state := m.winChecker.CheckWin(session.Board, session.Rules.WinLength)
 	if state == model.StateGameOver {
 		session.Winner = mark.String()
 		session.State = model.StateGameOver

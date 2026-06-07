@@ -2,10 +2,12 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"math/rand"
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
+
+	"github.com/google/uuid"
 )
 
 type Connect struct {
@@ -19,22 +21,28 @@ func NewConnect(sessionRepo port.SessionRepo) *Connect {
 }
 
 func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*model.Session, error) {
-	session, err := uc.sessionRepo.Get(ctx, cmd.SessionID)
+	wrap := func(err error) error {
+		return fmt.Errorf("connect (session %s): %w", cmd.SessionUUID, err)
+	}
+	session, err := uc.sessionRepo.Get(ctx, cmd.SessionUUID)
 	if err != nil {
-		if errors.Is(err, port.ErrSessionNotFound) {
-			return nil, fmt.Errorf("session %s not found", cmd.SessionID)
-		}
-		return nil, fmt.Errorf("connect: get session %s: %w", cmd.SessionID, err)
+		return nil, wrap(err)
 	}
 
-	err = session.AddPlayer(cmd.PlayerID, cmd.PlayerName)
+	am := session.GetAvailableMarks()
+	if len(am) == 0 {
+		return nil, wrap(model.ErrSessionFull)
+	}
+
+	player := model.NewPlayer(uuid.NewString(), cmd.PlayerName, am[rand.Intn(len(am))])
+	err = session.AddPlayer(player)
 	if err != nil {
-		return nil, err
+		return nil, wrap(err)
 	}
 
 	err = uc.sessionRepo.Save(ctx, session)
 	if err != nil {
-		return nil, fmt.Errorf("connect: save session %s: %w", session.UUID, err)
+		return nil, wrap(err)
 	}
 
 	return session, nil

@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	ErrOutOfBounds = errors.New("point out of bounds")
+	ErrOutOfBounds  = errors.New("point out of bounds")
+	ErrCellNotEmpty = errors.New("cell is not empty")
 )
 
 type Board struct {
@@ -58,7 +59,7 @@ func (b *Board) Clear() {
 
 func (b *Board) ClearMark(p geometry.Point) error {
 	if !b.InBounds(p) {
-		return fmt.Errorf("clear mark: %w, with point %v, board width %v, board height %v", ErrOutOfBounds, p, b.Width, b.Height)
+		return fmt.Errorf("clear mark (point %v): %w", p, ErrOutOfBounds)
 	}
 	b.cells[b.Width*p.Y+p.X] = MarkEmpty
 	return nil
@@ -66,12 +67,17 @@ func (b *Board) ClearMark(p geometry.Point) error {
 
 func (b *Board) SetMark(m Mark, p geometry.Point) error {
 	if !b.IsValidMark(m) {
-		panic(fmt.Sprintf("set mark: invalid mark %v", m))
+		panic(fmt.Sprintf("set mark (mark %v): invalid mark", m))
 	}
 	if !b.InBounds(p) {
-		return fmt.Errorf("set mark: %w with point %v, board width %v, board height %v", ErrOutOfBounds, p, b.Width, b.Height)
+		return fmt.Errorf("set mark (point %v): %w", p, ErrOutOfBounds)
 	}
-	b.cells[b.Width*p.Y+p.X] = m
+
+	i := b.Width*p.Y + p.X
+	if b.cells[i] != MarkEmpty {
+		return fmt.Errorf("set mark (point %v): %w", p, ErrCellNotEmpty)
+	}
+	b.cells[i] = m
 	return nil
 }
 
@@ -88,7 +94,7 @@ func (b *Board) GetEmptyCells() []geometry.Point {
 
 func (b *Board) GetMark(p geometry.Point) (Mark, error) {
 	if !b.InBounds(p) {
-		return MarkEmpty, fmt.Errorf("get mark: %w, with point %v", ErrOutOfBounds, p)
+		return MarkEmpty, fmt.Errorf("get mark (oint %v): %w", p, ErrOutOfBounds)
 	}
 	return b.cells[b.Width*p.Y+p.X], nil
 }

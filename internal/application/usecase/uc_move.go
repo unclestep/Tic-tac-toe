@@ -2,66 +2,72 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	appPort "tictactoe/internal/application/port"
+	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
-	servicePort "tictactoe/internal/domain/service/port"
+	"tictactoe/pkg/geometry"
 )
 
+type HumanMover interface {
+	MakeMove(session *model.Session, player *model.Player, p geometry.Point) error
+}
+
 type MakeMove struct {
-	sessionRepo   appPort.SessionRepo
-	gameMechanics servicePort.GameMechanics
+	sessionRepo port.SessionRepo
+	humanMover  HumanMover
+	botMover    BotMover
 }
 
-func NewMakeMove(sessionRepo appPort.SessionRepo, gameMechanics servicePort.GameMechanics) *MakeMove {
+func NewMakeMove(sessionRepo port.SessionRepo, humanMover HumanMover, botMover BotMover) *MakeMove {
 	return &MakeMove{
-		sessionRepo:   sessionRepo,
-		gameMechanics: gameMechanics,
+		sessionRepo: sessionRepo,
+		humanMover:  humanMover,
+		botMover:    botMover,
 	}
 }
 
-func (uc *MakeMove) Execute(ctx context.Context, cmd *appPort.MakeMoveCommand) (*model.Session, error) {
-	session, err := uc.sessionRepo.Get(ctx, cmd.SessionID)
+func (uc *MakeMove) Execute(ctx context.Context, cmd *port.MakeMoveCommand) (*model.Session, error) {
+	wrap := func(err error) error {
+		return fmt.Errorf("move (session %s, player %s): %w", cmd.SessionUUID, cmd.PlayerUUID, err)
+	}
+
+	session, err := uc.sessionRepo.Get(ctx, cmd.SessionUUID)
 	if err != nil {
-		if errors.Is(err, appPort.ErrSessionNotFound) {
-			return nil, fmt.Errorf("session %s not found", cmd.SessionID)
+		return nil, wrap(err)
+	}
+
+	switch session.State {
+	case model.StateLobby:
+		return nil, wrap(port.ErrGameNotStarted)
+	case model.StateGameOver:
+		return nil, wrap(model.ErrGameAlreadyOver)
+	}
+
+	if !session.IsPlayerExist(cmd.PlayerUUID) {
+		return nil, wrap(port.ErrPlayerNotBelongToSession)
+	}
+
+	turnPlayer, err := session.GetTurnPlayer()
+	if err != nil {
+		return nil, wrap(model.ErrPlayerNotFound)
+	}
+
+	if turnPlayer.UUID != cmd.PlayerUUID {
+		return nil, wrap(port.ErrPlayerCantMakeMove)
+	}
+
+	if err := uc.humanMover.MakeMove(session, turnPlayer, cmd.MarkPos); err != nil {
+		return nil, wrap(err)
+	}
+
+	if !session.IsFull() && session.State == model.StatePlaying {
+		if err := uc.botMover.MakeMove(session, turnPlayer.Mark.Opposite()); err != nil {
+			return nil, wrap(err)
 		}
-		return nil, fmt.Errorf("move: get session %s: %w", cmd.SessionID, err)
 	}
 
-	if session.State != model.StatePlaying {
-		return nil, fmt.Errorf("%w: session %s", appPort.ErrGameNotStarted, session.UUID)
-	}
-
-	if !session.IsPlayerExist(cmd.PlayerID) {
-		return nil, fmt.Errorf("%w: session %s, player %s", appPort.ErrPlayerNotBelongToSession, session.UUID, cmd.PlayerID)
-	}
-
-	player := session.GetTurnPlayer()
-	if player == nil {
-		return nil, fmt.Errorf("%w: session %s, player %s", model.ErrPlayerNotFound, session.UUID, cmd.PlayerID)
-	}
-
-	if player.UUID != cmd.PlayerID {
-		return nil, fmt.Errorf("%w: not player %s turn, session %s", appPort.ErrPlayerCantMakeMove, cmd.PlayerID, cmd.SessionID)
-	}
-
-	err = uc.gameMechanics.MakeMove(session, player, cmd.MarkPos)
-	if err != nil {
-		return nil, err
-	}
-
-	if session.State == model.StatePlaying {
-		err = uc.gameMechanics.Advance(session)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	err = uc.sessionRepo.Save(ctx, session)
-	if err != nil {
-		return nil, err
+	if err := uc.sessionRepo.Save(ctx, session); err != nil {
+		return nil, wrap(err)
 	}
 
 	return session, nil

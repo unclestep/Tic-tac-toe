@@ -243,13 +243,10 @@ const docTemplate = `{
         "dto.ConnectRequest": {
             "type": "object",
             "properties": {
-                "player_id": {
-                    "type": "string"
-                },
                 "player_name": {
                     "type": "string"
                 },
-                "session_id": {
+                "session_uuid": {
                     "type": "string"
                 }
             }
@@ -257,12 +254,6 @@ const docTemplate = `{
         "dto.CreateRequest": {
             "type": "object",
             "properties": {
-                "player_id": {
-                    "type": "string"
-                },
-                "player_name": {
-                    "type": "string"
-                },
                 "rules": {
                     "$ref": "#/definitions/dto.Rules"
                 },
@@ -274,10 +265,10 @@ const docTemplate = `{
         "dto.DisconnectRequest": {
             "type": "object",
             "properties": {
-                "player_id": {
+                "player_uuid": {
                     "type": "string"
                 },
-                "session_id": {
+                "session_uuid": {
                     "type": "string"
                 }
             }
@@ -296,10 +287,24 @@ const docTemplate = `{
                 "mark_pos": {
                     "$ref": "#/definitions/geometry.Point"
                 },
-                "player_id": {
+                "player_uuid": {
                     "type": "string"
                 },
-                "session_id": {
+                "session_uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.Player": {
+            "type": "object",
+            "properties": {
+                "mark": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "uuid": {
                     "type": "string"
                 }
             }
@@ -330,10 +335,10 @@ const docTemplate = `{
                 "players": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/dto.Player"
                     }
                 },
-                "session_id": {
+                "session_uuid": {
                     "type": "string"
                 },
                 "state": {
@@ -347,10 +352,10 @@ const docTemplate = `{
         "dto.StartRequest": {
             "type": "object",
             "properties": {
-                "player_id": {
+                "player_uuid": {
                     "type": "string"
                 },
-                "session_id": {
+                "session_uuid": {
                     "type": "string"
                 }
             }
@@ -371,12 +376,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
-	Host:             "",
-	BasePath:         "",
+	Version:          "1.0",
+	Host:             "localhost:12121",
+	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "Tic-Tac-Toe API",
+	Description:      "Tic-Tac-Toe Game API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

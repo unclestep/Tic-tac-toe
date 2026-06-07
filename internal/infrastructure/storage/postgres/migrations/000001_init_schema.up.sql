@@ -9,7 +9,6 @@ CREATE TABLE sessions (
     uuid TEXT PRIMARY KEY,
     rules_uuid TEXT NOT NULL REFERENCES rules(uuid),
     board JSONB NOT NULL,
-    bots INT NOT NULL DEFAULT 0,
     turn INT NOT NULL DEFAULT 0,
     winner TEXT NOT NULL DEFAULT '',
     state TEXT NOT NULL,
@@ -21,6 +20,5 @@ CREATE TABLE players (
    session_uuid TEXT NOT NULL REFERENCES sessions(uuid) ON DELETE CASCADE,
    name TEXT NOT NULL,
    mark VARCHAR(1) NOT NULL,
-   bot BOOLEAN NOT NULL,
    PRIMARY KEY(session_uuid, mark)
 );

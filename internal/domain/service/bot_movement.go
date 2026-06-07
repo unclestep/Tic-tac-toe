@@ -7,36 +7,39 @@ import (
 	"tictactoe/pkg/geometry"
 )
 
-type BotLogic struct {
+type BotMovement struct {
 	winChecker *WinChecker
 }
 
-func NewBotLogic(winChecker *WinChecker) *BotLogic {
-	return &BotLogic{
+func NewBotMovement(winChecker *WinChecker) *BotMovement {
+	return &BotMovement{
 		winChecker: winChecker,
 	}
 }
 
-func (m *BotLogic) BestMove(session *model.Session, botMark model.Mark) error {
+func (m *BotMovement) MakeMove(session *model.Session, botMark model.Mark) error {
 	board := session.Board
 
 	emptyCells := board.GetEmptyCells()
 	if session.State == model.StateGameOver || len(emptyCells) == 0 {
-		return fmt.Errorf("%w: %s", model.ErrGameAlreadyOver, session.UUID)
+		return fmt.Errorf("best move (session %s): %w", session.UUID, model.ErrGameAlreadyOver)
 	}
 
 	bestScore := model.Mark(math.MinInt8)
 	bestPoint := geometry.Point{}
 	maximizing := true
 	// X - maximizing, O - minimizing
-	if botMark == model.O {
+	if botMark == model.MarkO {
 		bestScore = model.Mark(math.MaxInt8)
 		maximizing = false
 	}
 
 	for _, cell := range emptyCells {
-		_ = board.SetMark(botMark, cell)
-		score := m.perform(board, !maximizing, model.Mark(math.MinInt8), model.Mark(math.MaxInt8))
+		err := board.SetMark(botMark, cell)
+		if err != nil {
+			panic("best move: set mark precondition violation")
+		}
+		score := m.perform(session, !maximizing, model.Mark(math.MinInt8), model.Mark(math.MaxInt8))
 		_ = board.ClearMark(cell)
 
 		if maximizing {
@@ -54,18 +57,20 @@ func (m *BotLogic) BestMove(session *model.Session, botMark model.Mark) error {
 
 	_ = board.SetMark(botMark, bestPoint)
 
-	mark, state := m.winChecker.CheckWin(board)
+	mark, state := m.winChecker.CheckWin(board, session.Rules.WinLength)
 	if state == model.StateGameOver {
-		session.Winner = session.DetermineWinner(mark)
-		session.State = state
+		session.Winner = mark.String()
+		session.State = model.StateGameOver
 	}
 	session.Turn++
 
 	return nil
 }
 
-func (m *BotLogic) perform(board *model.Board, maximizingPlayer bool, alpha, beta model.Mark) model.Mark {
-	if winner, state := m.winChecker.CheckWin(board); state == model.StateGameOver {
+func (m *BotMovement) perform(session *model.Session, maximizingPlayer bool, alpha, beta model.Mark) model.Mark {
+	board := session.Board
+
+	if winner, state := m.winChecker.CheckWin(board, session.Rules.WinLength); state == model.StateGameOver {
 		return winner
 	}
 
@@ -77,8 +82,8 @@ func (m *BotLogic) perform(board *model.Board, maximizingPlayer bool, alpha, bet
 	if maximizingPlayer {
 		maxEval := model.Mark(math.MinInt8)
 		for _, cell := range emptyCells {
-			_ = board.SetMark(model.X, cell)
-			eval := m.perform(board, false, alpha, beta)
+			_ = board.SetMark(model.MarkX, cell)
+			eval := m.perform(session, false, alpha, beta)
 			_ = board.ClearMark(cell)
 
 			maxEval = max(maxEval, eval)
@@ -92,8 +97,8 @@ func (m *BotLogic) perform(board *model.Board, maximizingPlayer bool, alpha, bet
 
 	minEval := model.Mark(math.MaxInt8)
 	for _, cell := range emptyCells {
-		_ = board.SetMark(model.O, cell)
-		eval := m.perform(board, true, alpha, beta)
+		_ = board.SetMark(model.MarkO, cell)
+		eval := m.perform(session, true, alpha, beta)
 		_ = board.ClearMark(cell)
 
 		minEval = min(minEval, eval)

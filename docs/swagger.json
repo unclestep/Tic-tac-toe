@@ -1,8 +1,13 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "Tic-Tac-Toe Game API",
+        "title": "Tic-Tac-Toe API",
+        "contact": {},
+        "version": "1.0"
     },
+    "host": "localhost:12121",
+    "basePath": "/",
     "paths": {
         "/game/create": {
             "post": {
@@ -232,13 +237,10 @@
         "dto.ConnectRequest": {
             "type": "object",
             "properties": {
-                "player_id": {
-                    "type": "string"
-                },
                 "player_name": {
                     "type": "string"
                 },
-                "session_id": {
+                "session_uuid": {
                     "type": "string"
                 }
             }
@@ -246,12 +248,6 @@
         "dto.CreateRequest": {
             "type": "object",
             "properties": {
-                "player_id": {
-                    "type": "string"
-                },
-                "player_name": {
-                    "type": "string"
-                },
                 "rules": {
                     "$ref": "#/definitions/dto.Rules"
                 },
@@ -263,10 +259,10 @@
         "dto.DisconnectRequest": {
             "type": "object",
             "properties": {
-                "player_id": {
+                "player_uuid": {
                     "type": "string"
                 },
-                "session_id": {
+                "session_uuid": {
                     "type": "string"
                 }
             }
@@ -285,10 +281,24 @@
                 "mark_pos": {
                     "$ref": "#/definitions/geometry.Point"
                 },
-                "player_id": {
+                "player_uuid": {
                     "type": "string"
                 },
-                "session_id": {
+                "session_uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.Player": {
+            "type": "object",
+            "properties": {
+                "mark": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "uuid": {
                     "type": "string"
                 }
             }
@@ -319,10 +329,10 @@
                 "players": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/dto.Player"
                     }
                 },
-                "session_id": {
+                "session_uuid": {
                     "type": "string"
                 },
                 "state": {
@@ -336,10 +346,10 @@
         "dto.StartRequest": {
             "type": "object",
             "properties": {
-                "player_id": {
+                "player_uuid": {
                     "type": "string"
                 },
-                "session_id": {
+                "session_uuid": {
                     "type": "string"
                 }
             }

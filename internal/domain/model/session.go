@@ -7,13 +7,13 @@ import (
 
 type Session struct {
 	UUID    string
-	RulesID string
 	Board   *Board
 	Players []*Player
 	Turn    int
 	Winner  string
 	State   State
 	Params  *SessionParams
+	Rules   *Rules
 }
 
 type State int
@@ -30,27 +30,27 @@ type SessionParams struct {
 }
 
 var (
-	ErrPlayerNotFound = errors.New("player not found")
-	ErrPlayerExists   = errors.New("player already exists")
-	ErrSessionFull    = errors.New("session is full")
-	ErrMarkTaken      = errors.New("mark is taken")
+	ErrPlayerNotFound  = errors.New("player not found")
+	ErrPlayerExists    = errors.New("player already exists")
+	ErrSessionFull     = errors.New("session is full")
+	ErrMarkTaken       = errors.New("mark is taken")
+	ErrGameAlreadyOver = errors.New("game is already over")
 )
 
-func NewSession(sessionUUID string, params *SessionParams, rules *Rules) *Session {
+func NewSession(sessionUUID string, params *SessionParams, rules *Rules, board *Board) *Session {
 	return &Session{
 		UUID:    sessionUUID,
-		RulesID: rules.UUID,
-		Board:   NewBoard(rules.BoardWidth, rules.BoardHeight),
+		Board:   board,
 		Players: make([]*Player, 0, 2),
 		State:   StateLobby,
 		Params:  params,
+		Rules:   rules,
 	}
 }
 
 func (s *Session) Clone() *Session {
 	return &Session{
 		UUID:    s.UUID,
-		RulesID: s.RulesID,
 		Board:   s.Board.Clone(),
 		Players: s.ClonePlayers(),
 		Turn:    s.Turn,
@@ -59,6 +59,7 @@ func (s *Session) Clone() *Session {
 		Params: &SessionParams{
 			Seed: s.Params.Seed,
 		},
+		Rules: s.Rules.Clone(),
 	}
 }
 
@@ -68,6 +69,13 @@ func (s *Session) ClonePlayers() []*Player {
 		clone[i] = player.Clone()
 	}
 	return clone
+}
+
+func (s *Session) Start() {
+	s.State = StatePlaying
+	s.Board.Clear()
+	s.Winner = ""
+	s.Turn = 0
 }
 
 func (s *Session) IsPlayerExist(playerUUID string) bool {

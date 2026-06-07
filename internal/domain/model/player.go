@@ -21,6 +21,19 @@ func (m Mark) Opposite() Mark {
 	return MarkX
 }
 
+func (m Mark) String() string {
+	switch m {
+	case MarkEmpty:
+		return " "
+	case MarkX:
+		return "X"
+	case MarkO:
+		return "0"
+	default:
+		return "?"
+	}
+}
+
 func NewPlayer(UUID, name string, mark Mark) *Player {
 	return &Player{
 		UUID: UUID,

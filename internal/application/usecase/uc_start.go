@@ -2,59 +2,67 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
-	appPort "tictactoe/internal/application/port"
+	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
-	servicePort "tictactoe/internal/domain/service/port"
 )
 
 type Start struct {
-	sessionRepo   appPort.SessionRepo
-	gameMechanics servicePort.GameMechanics
+	sessionRepo port.SessionRepo
+	botMover    BotMover
 }
 
-func NewStart(sessionRepo appPort.SessionRepo, gameService servicePort.GameMechanics) *Start {
+func NewStart(sessionRepo port.SessionRepo, botMover BotMover) *Start {
 	return &Start{
-		sessionRepo:   sessionRepo,
-		gameMechanics: gameService,
+		sessionRepo: sessionRepo,
+		botMover:    botMover,
 	}
 }
 
-func (uc *Start) Execute(ctx context.Context, cmd *appPort.StartCommand) (*model.Session, error) {
-	session, err := uc.sessionRepo.Get(ctx, cmd.SessionID)
+func (uc *Start) Execute(ctx context.Context, cmd *port.StartCommand) (*model.Session, error) {
+	wrap := func(err error) error {
+		return fmt.Errorf("start (session %s, player %s): %w", cmd.SessionUUID, cmd.PlayerUUID, err)
+	}
+
+	session, err := uc.sessionRepo.Get(ctx, cmd.SessionUUID)
 	if err != nil {
-		if errors.Is(err, appPort.ErrSessionNotFound) {
-			return nil, fmt.Errorf("session %s not found", cmd.SessionID)
-		}
-		return nil, fmt.Errorf("start: get session %s: %w", cmd.SessionID, err)
+		return nil, wrap(err)
 	}
 
 	if session.State == model.StatePlaying {
-		return nil, fmt.Errorf("%w: session %s", appPort.ErrGameAlreadyStarted, session.UUID)
+		return nil, wrap(port.ErrGameAlreadyStarted)
 	}
 
-	if !session.IsPlayerExist(cmd.PlayerID) {
-		return nil, fmt.Errorf("%w: session %s, player %s", appPort.ErrPlayerNotBelongToSession, session.UUID, cmd.PlayerID)
+	if !session.IsPlayerExist(cmd.PlayerUUID) {
+		return nil, wrap(port.ErrPlayerNotBelongToSession)
 	}
 
 	rng := rand.New(rand.NewSource(session.Params.Seed))
-	session.State = model.StatePlaying
+	session.Start()
 
-	if len(session.Players) == 1 {
-		session.AddBot()
+	if session.IsFull() {
+		rng.Shuffle(len(session.Players), func(i, j int) {
+			session.Players[i], session.Players[j] = session.Players[j], session.Players[i]
+		})
+		session.Players[0].Mark = model.MarkX
+		session.Players[1].Mark = model.MarkO
+	} else {
+		if rng.Intn(2) == 1 {
+			session.Players[0].Mark = model.MarkO
+			if err := uc.botMover.MakeMove(session, session.Players[0].Mark.Opposite()); err != nil {
+				return nil, wrap(err)
+			}
+		} else {
+			session.Players[0].Mark = model.MarkX
+		}
+
 	}
 
-	uc.gameMechanics.Prepare(session, rng)
-	err = uc.gameMechanics.Advance(session)
-	if err != nil {
-		return nil, err
-	}
+	session.Params.Seed = rng.Int63()
 
-	err = uc.sessionRepo.Save(ctx, session)
-	if err != nil {
-		return nil, err
+	if err = uc.sessionRepo.Save(ctx, session); err != nil {
+		return nil, wrap(err)
 	}
 
 	return session, nil

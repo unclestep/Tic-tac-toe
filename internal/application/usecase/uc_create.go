@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
+
+	"github.com/google/uuid"
 )
 
 type Create struct {
@@ -20,25 +22,21 @@ func NewCreate(sessionRepo port.SessionRepo, rulesRepo port.RulesRepo) *Create {
 }
 
 func (uc *Create) Execute(ctx context.Context, cmd *port.CreateCommand) (*model.Session, error) {
-	// The function will assign a UUID if it is empty.
+	wrap := func(err error) error {
+		return fmt.Errorf("create: %w", err)
+	}
+
+	cmd.Rules.UUID = uuid.NewString()
 	err := uc.rulesRepo.Save(ctx, cmd.Rules)
 	if err != nil {
-		return nil, err
+		return nil, wrap(err)
 	}
 
-	session, err := uc.sessionRepo.Create(ctx, cmd.SessionParams, cmd.Rules)
-	if err != nil {
-		return nil, fmt.Errorf("create: cant create session : %w", err)
-	}
-
-	err = session.AddPlayer(cmd.PlayerID, cmd.PlayerName)
-	if err != nil {
-		return nil, fmt.Errorf("create: %w", err)
-	}
-
+	board := model.NewBoard(cmd.Rules.BoardWidth, cmd.Rules.BoardHeight)
+	session := model.NewSession(uuid.NewString(), cmd.SessionParams, cmd.Rules, board)
 	err = uc.sessionRepo.Save(ctx, session)
 	if err != nil {
-		return nil, fmt.Errorf("connect: save session %s: %w", session.UUID, err)
+		return nil, wrap(err)
 	}
 
 	return session, nil

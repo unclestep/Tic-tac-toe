@@ -2,47 +2,54 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	appPort "tictactoe/internal/application/port"
+	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
-	servPort "tictactoe/internal/domain/service/port"
 )
 
+type BotMover interface {
+	MakeMove(session *model.Session, botMark model.Mark) error
+}
+
 type Disconnect struct {
-	sessionRepo   appPort.SessionRepo
-	gameMechanics servPort.GameMechanics
+	sessionRepo port.SessionRepo
+	botMover    BotMover
 }
 
-func NewDisconnect(sessionRepo appPort.SessionRepo, gameMechanics servPort.GameMechanics) *Disconnect {
+func NewDisconnect(sessionRepo port.SessionRepo, botMover BotMover) *Disconnect {
 	return &Disconnect{
-		sessionRepo:   sessionRepo,
-		gameMechanics: gameMechanics,
+		sessionRepo: sessionRepo,
+		botMover:    botMover,
 	}
 }
 
-func (uc *Disconnect) Execute(ctx context.Context, cmd *appPort.DisconnectCommand) (*model.Session, error) {
-	session, err := uc.sessionRepo.Get(ctx, cmd.SessionID)
+func (uc *Disconnect) Execute(ctx context.Context, cmd *port.DisconnectCommand) (*model.Session, error) {
+	wrap := func(err error) error {
+		return fmt.Errorf("disconnect (session %s, player %s): %w", cmd.SessionUUID, cmd.PlayerUUID, err)
+	}
+
+	session, err := uc.sessionRepo.Get(ctx, cmd.SessionUUID)
 	if err != nil {
-		if errors.Is(err, appPort.ErrSessionNotFound) {
-			return nil, fmt.Errorf("session %s not found", cmd.SessionID)
+		return nil, wrap(err)
+	}
+
+	turnPlayer, err := session.GetTurnPlayer()
+	if err != nil {
+		return nil, wrap(err)
+	}
+
+	if err := session.RemovePlayer(cmd.PlayerUUID); err != nil {
+		return nil, wrap(err)
+	}
+
+	if turnPlayer.UUID == cmd.PlayerUUID {
+		if err := uc.botMover.MakeMove(session, turnPlayer.Mark); err != nil {
+			return nil, wrap(err)
 		}
-		return nil, fmt.Errorf("disconnect: get session %s: %w", cmd.SessionID, err)
 	}
 
-	err = session.HidePlayer(cmd.PlayerID)
-	if err != nil {
-		return nil, err
-	}
-
-	err = uc.gameMechanics.Advance(session)
-	if err != nil {
-		return nil, err
-	}
-
-	err = uc.sessionRepo.Save(ctx, session)
-	if err != nil {
-		return nil, err
+	if err := uc.sessionRepo.Save(ctx, session); err != nil {
+		return nil, wrap(err)
 	}
 
 	return session, nil
