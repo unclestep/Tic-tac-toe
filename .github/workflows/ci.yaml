@@ -22,6 +22,8 @@ jobs:
         uses: golangci/golangci-lint-action@v9.2.1
       - name: pre-commit
         uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: no-commit-to-branch
 
   go-test:
     name: test
