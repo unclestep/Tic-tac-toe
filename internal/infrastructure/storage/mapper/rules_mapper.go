@@ -1,12 +1,12 @@
 package mapper
 
 import (
-	domain "tictactoe/internal/domain/model"
-	record "tictactoe/internal/infrastructure/storage/model"
+	dmodel "tictactoe/internal/domain/model"
+	dsmodel "tictactoe/internal/infrastructure/storage/model"
 )
 
-func ToRulesRecords(rules *domain.Rules) record.RulesRecord {
-	return record.RulesRecord{
+func ToRulesStorage(rules *dmodel.Rules) *dsmodel.RulesRecord {
+	return &dsmodel.RulesRecord{
 		UUID:        rules.UUID,
 		BoardWidth:  rules.BoardWidth,
 		BoardHeight: rules.BoardHeight,
@@ -14,8 +14,8 @@ func ToRulesRecords(rules *domain.Rules) record.RulesRecord {
 	}
 }
 
-func ToRulesDomain(record record.RulesRecord) *domain.Rules {
-	return &domain.Rules{
+func ToRulesDomain(record *dsmodel.RulesRecord) *dmodel.Rules {
+	return &dmodel.Rules{
 		UUID:        record.UUID,
 		BoardWidth:  record.BoardWidth,
 		BoardHeight: record.BoardHeight,

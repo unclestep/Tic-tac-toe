@@ -1,26 +1,27 @@
 package mapper
 
 import (
-	domain "tictactoe/internal/domain/model"
-	record "tictactoe/internal/infrastructure/storage/model"
+	"fmt"
+	dmodel "tictactoe/internal/domain/model"
+	dsmodel "tictactoe/internal/infrastructure/storage/model"
 )
 
-func ToSessionRecord(s *domain.Session) record.SessionRecord {
-	return record.SessionRecord{
-		UUID:    s.UUID,
-		RulesID: s.RulesID,
-		Board:   toBoardRecord(s.Board),
-		Players: convPlayersToRecords(s.Players),
-		Bots:    s.Bots,
-		Turn:    s.Turn,
-		Winner:  s.Winner,
-		State:   stateToString(s.State),
-		Seed:    s.Params.Seed,
+func ToSessionStorage(s *dmodel.Session) *dsmodel.SessionRecord {
+	return &dsmodel.SessionRecord{
+		UUID:      s.UUID,
+		RulesUUID: s.RulesID,
+		Board:     toBoardStorage(s.Board),
+		Players:   convPlayersToStorage(s.Players),
+		Bots:      s.Bots,
+		Turn:      s.Turn,
+		Winner:    s.Winner,
+		State:     stateToString(s.State),
+		Seed:      s.Params.Seed,
 	}
 }
 
-func toBoardRecord(b *domain.Board) record.BoardRecord {
-	r := record.BoardRecord{
+func toBoardStorage(b *dmodel.Board) *dsmodel.BoardRecord {
+	r := dsmodel.BoardRecord{
 		Width:  b.Width,
 		Height: b.Height,
 		Cells:  make([]int8, b.Width*b.Height),
@@ -30,109 +31,132 @@ func toBoardRecord(b *domain.Board) record.BoardRecord {
 		r.Cells[i] = int8(cell)
 	}
 
-	return r
+	return &r
 }
 
-func convPlayersToRecords(players []*domain.Player) []record.PlayerRecord {
-	records := make([]record.PlayerRecord, len(players))
+func convPlayersToStorage(players []*dmodel.Player) []*dsmodel.PlayerRecord {
+	records := make([]*dsmodel.PlayerRecord, len(players))
 	for i, player := range players {
-		records[i] = toPlayerRecord(player)
+		records[i] = toPlayerStorage(player)
 	}
 	return records
 }
 
-func toPlayerRecord(p *domain.Player) record.PlayerRecord {
-	return record.PlayerRecord{
-		ID:    p.UUID,
-		Name:  p.Name,
-		Mark:  markToString(p.Mark),
-		IsBot: p.IsBot,
+func toPlayerStorage(p *dmodel.Player) *dsmodel.PlayerRecord {
+	return &dsmodel.PlayerRecord{
+		UUID: p.UUID,
+		Name: p.Name,
+		Mark: markToString(p.Mark),
+		Bot:  p.IsBot,
 	}
 }
 
-func markToString(mark domain.Mark) string {
+func markToString(mark dmodel.Mark) string {
 	switch mark {
-	case domain.X:
+	case dmodel.X:
 		return "X"
-	case domain.O:
+	case dmodel.O:
 		return "O"
-	default:
+	case dmodel.Empty:
 		return "Empty"
+	default:
+		return "Unknown"
 	}
 }
 
-func stateToString(state domain.State) string {
+func stateToString(state dmodel.State) string {
 	switch state {
-	case domain.StateLobby:
+	case dmodel.StateLobby:
 		return "Lobby"
-	case domain.StatePlaying:
+	case dmodel.StatePlaying:
 		return "Playing"
-	case domain.StateGameOver:
+	case dmodel.StateGameOver:
 		return "GameOver"
 	default:
 		return "Unknown"
 	}
 }
 
-func ToSessionDomain(r record.SessionRecord) *domain.Session {
-	return &domain.Session{
+func ToSessionDomain(r *dsmodel.SessionRecord) (*dmodel.Session, error) {
+	players, err := convPlayersToDomain(r.Players)
+	if err != nil {
+		return nil, fmt.Errorf("to session domain: %w", err)
+	}
+
+	state, err := stringToState(r.State)
+	if err != nil {
+		return nil, fmt.Errorf("to session domain: %w", err)
+	}
+
+	return &dmodel.Session{
 		UUID:    r.UUID,
-		RulesID: r.RulesID,
+		RulesID: r.RulesUUID,
 		Board:   toBoardDomain(r.Board),
-		Players: convPlayersToDomain(r.Players),
+		Players: players,
 		Bots:    r.Bots,
 		Turn:    r.Turn,
 		Winner:  r.Winner,
-		State:   stringToState(r.State),
-		Params:  &domain.SessionParams{Seed: r.Seed},
-	}
+		State:   state,
+		Params:  &dmodel.SessionParams{Seed: r.Seed},
+	}, nil
 }
 
-func toBoardDomain(r record.BoardRecord) *domain.Board {
-	cells := make([]domain.Mark, len(r.Cells))
+func toBoardDomain(r *dsmodel.BoardRecord) *dmodel.Board {
+	cells := make([]dmodel.Mark, len(r.Cells))
 	for i, cell := range r.Cells {
-		cells[i] = domain.Mark(cell)
+		cells[i] = dmodel.Mark(cell)
 	}
-	return domain.NewBoardFromCells(r.Width, r.Height, cells)
+	return dmodel.NewBoardFromCells(r.Width, r.Height, cells)
 }
 
-func convPlayersToDomain(records []record.PlayerRecord) []*domain.Player {
-	players := make([]*domain.Player, len(records))
-	for i, r := range records {
-		players[i] = toPlayerDomain(r)
+func convPlayersToDomain(records []*dsmodel.PlayerRecord) ([]*dmodel.Player, error) {
+	players := make([]*dmodel.Player, 0, len(records))
+	for _, r := range records {
+		player, err := toPlayerDomain(r)
+		if err != nil {
+			return nil, fmt.Errorf("conv players to domain: %w", err)
+		}
+		players = append(players, player)
 	}
-	return players
+	return players, nil
 }
 
-func toPlayerDomain(r record.PlayerRecord) *domain.Player {
-	return &domain.Player{
-		UUID:  r.ID,
+func toPlayerDomain(r *dsmodel.PlayerRecord) (*dmodel.Player, error) {
+	mark, err := stringToMark(r.Mark)
+	if err != nil {
+		return nil, fmt.Errorf("to player domain: %w", err)
+	}
+
+	return &dmodel.Player{
+		UUID:  r.UUID,
 		Name:  r.Name,
-		Mark:  stringToMark(r.Mark),
-		IsBot: r.IsBot,
-	}
+		Mark:  mark,
+		IsBot: r.Bot,
+	}, nil
 }
 
-func stringToMark(s string) domain.Mark {
+func stringToMark(s string) (dmodel.Mark, error) {
 	switch s {
 	case "X":
-		return domain.X
+		return dmodel.X, nil
 	case "O":
-		return domain.O
+		return dmodel.O, nil
+	case "Empty":
+		return dmodel.Empty, nil
 	default:
-		return domain.Empty
+		return 0, fmt.Errorf("unknown mark: %s", s)
 	}
 }
 
-func stringToState(s string) domain.State {
+func stringToState(s string) (dmodel.State, error) {
 	switch s {
 	case "Lobby":
-		return domain.StateLobby
+		return dmodel.StateLobby, nil
 	case "Playing":
-		return domain.StatePlaying
+		return dmodel.StatePlaying, nil
 	case "GameOver":
-		return domain.StateGameOver
+		return dmodel.StateGameOver, nil
 	default:
-		return domain.StateLobby
+		return dmodel.StateUnknown, fmt.Errorf("unknown state: %s", s)
 	}
 }
