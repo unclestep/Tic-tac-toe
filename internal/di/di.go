@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+
 	aport "tictactoe/internal/application/port"
 	"tictactoe/internal/application/usecase"
 	httpDelivery "tictactoe/internal/delivery/http"
@@ -60,6 +61,7 @@ var domain = fx.Module(
 		fx.As(new(usecase.HumanMover)),
 	)),
 	fx.Provide(service.NewWinChecker),
+	fx.Provide(service.NewHeuristic),
 )
 
 var app = fx.Module(

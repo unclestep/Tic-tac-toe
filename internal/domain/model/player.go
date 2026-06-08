@@ -15,10 +15,13 @@ const (
 )
 
 func (m Mark) Opposite() Mark {
-	if m == MarkX {
+	switch m {
+	case MarkX:
 		return MarkO
+	case MarkO:
+		return MarkX
 	}
-	return MarkX
+	return MarkO
 }
 
 func (m Mark) String() string {
