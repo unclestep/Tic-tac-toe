@@ -6,7 +6,7 @@ import (
 )
 
 type SessionDataSource interface {
-	Store(ctx context.Context, session model.SessionRecord) error
-	Fetch(ctx context.Context, id string) (model.SessionRecord, error)
-	Delete(ctx context.Context, id string) error
+	Store(ctx context.Context, session *model.SessionRecord) error
+	Fetch(ctx context.Context, UUID string) (*model.SessionRecord, error)
+	Delete(ctx context.Context, UUID string) error
 }

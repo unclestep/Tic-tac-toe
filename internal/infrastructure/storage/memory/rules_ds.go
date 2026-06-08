@@ -5,50 +5,42 @@ import (
 	"fmt"
 	"sync"
 	"tictactoe/internal/application/port"
-	datasourceModel "tictactoe/internal/infrastructure/storage/model"
-
-	"github.com/google/uuid"
+	dsmodel "tictactoe/internal/infrastructure/storage/model"
 )
 
 type RulesDataSource struct {
-	rules map[string]datasourceModel.RulesRecord
+	rules map[string]*dsmodel.RulesRecord
 	mu    sync.RWMutex
 }
 
 func NewMemoryRulesDataSource() *RulesDataSource {
 	return &RulesDataSource{
-		rules: make(map[string]datasourceModel.RulesRecord),
+		rules: make(map[string]*dsmodel.RulesRecord),
 	}
 }
 
-func (ds *RulesDataSource) Fetch(_ context.Context, id string) (datasourceModel.RulesRecord, error) {
+func (ds *RulesDataSource) Fetch(_ context.Context, UUID string) (*dsmodel.RulesRecord, error) {
 	ds.mu.RLock()
-	record, exists := ds.rules[id]
+	record, exists := ds.rules[UUID]
 	ds.mu.RUnlock()
 
 	if !exists {
-		return datasourceModel.RulesRecord{}, fmt.Errorf("%w: %s", port.ErrRulesNotFound, id)
+		return nil, fmt.Errorf("memory storage: %w: %s", port.ErrRulesNotFound, UUID)
 	}
 
-	return record, nil
+	return record.Clone(), nil
 }
 
-func (ds *RulesDataSource) Store(_ context.Context, record datasourceModel.RulesRecord) error {
-	// New rules - dont throw error
-	if record.UUID == "" {
-		record.UUID = uuid.New().String()
-	}
-
+func (ds *RulesDataSource) Store(_ context.Context, record *dsmodel.RulesRecord) error {
 	ds.mu.Lock()
-	ds.rules[record.UUID] = record
+	ds.rules[record.UUID] = record.Clone()
 	ds.mu.Unlock()
-
 	return nil
 }
 
-func (ds *RulesDataSource) Delete(_ context.Context, id string) error {
+func (ds *RulesDataSource) Delete(_ context.Context, UUID string) error {
 	ds.mu.Lock()
-	delete(ds.rules, id)
+	delete(ds.rules, UUID)
 	ds.mu.Unlock()
 	return nil
 }
