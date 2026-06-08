@@ -31,7 +31,7 @@ func (m Mark) String() string {
 	case MarkX:
 		return "X"
 	case MarkO:
-		return "0"
+		return "O"
 	default:
 		return "?"
 	}
