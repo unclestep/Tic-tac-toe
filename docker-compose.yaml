@@ -1,30 +1,32 @@
 services:
   tic-tac-toe-backend:
-    image: tic-tac-toe-backend
     build: .
-    container_name: ttt-backend
-    env_file:
-      - ".env"
-    ports:
-      - "${BACKEND_PORT:-8080}:8080"
-    depends_on:
-      tic-tac-toe-db:
-        condition: service_healthy
-
-  tic-tac-toe-db:
-    image: postgres:18.3-alpine
-    container_name: ttt-db
+    container_name: tic-tac-toe-backend
     env_file: ".env"
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${TICTACTOE_PORT}:${TICTACTOE_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18.3-alpine
+    container_name: tic-tac-toe-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
 
 volumes:
   postgres_data:

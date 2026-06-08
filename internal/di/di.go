@@ -2,6 +2,7 @@ package di
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -31,17 +32,17 @@ var TicTacToe = fx.Module(
 func registerServer(lc fx.Lifecycle, router *httpDelivery.Router) {
 	server := http.Server{
 		Handler: router.Handler(),
-		Addr:    "localhost:12121",
+		Addr:    os.Getenv("TICTACTOE_ADDR"),
 	}
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
-				if err := server.ListenAndServe(); err != nil {
+				if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					log.Fatalf("server error: %s", err)
 				}
 			}()
-			log.Printf("\nserver has started on: %s", os.Getenv("SERVER_ADDR"))
+			log.Printf("\nserver has started on: %s", os.Getenv("TICTACTOE_ADDR"))
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

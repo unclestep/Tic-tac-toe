@@ -2,6 +2,6 @@ swagger:
 	swag init -g cmd/main.go
 
 run: swagger
-	go run cmd/main.go
+	go run cmd/main.go CGO_ENABLED=0
 
-.PHONE: swagger run
+.PHONY: swagger run
