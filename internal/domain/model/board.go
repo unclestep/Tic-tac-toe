@@ -111,7 +111,7 @@ func (b *Board) GetEmptyCells() []geometry.Point {
 
 func (b *Board) GetMark(p geometry.Point) (Mark, error) {
 	if !b.InBounds(p) {
-		return MarkEmpty, fmt.Errorf("get mark (oint %v): %w", p, ErrOutOfBounds)
+		return MarkEmpty, fmt.Errorf("get mark (point %v): %w", p, ErrOutOfBounds)
 	}
 	return b.Cells[b.Width*p.Y+p.X], nil
 }

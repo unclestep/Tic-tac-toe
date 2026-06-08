@@ -4,16 +4,17 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
 )
 
 type Start struct {
 	sessionRepo port.SessionRepo
-	botMover    BotMover
+	botMover    port.BotMover
 }
 
-func NewStart(sessionRepo port.SessionRepo, botMover BotMover) *Start {
+func NewStart(sessionRepo port.SessionRepo, botMover port.BotMover) *Start {
 	return &Start{
 		sessionRepo: sessionRepo,
 		botMover:    botMover,
@@ -30,7 +31,7 @@ func (uc *Start) Execute(ctx context.Context, cmd *port.StartCommand) (*model.Se
 		return nil, wrap(err)
 	}
 
-	if session.State == model.StatePlaying {
+	if session.State != model.StateLobby {
 		return nil, wrap(port.ErrGameAlreadyStarted)
 	}
 
@@ -56,7 +57,6 @@ func (uc *Start) Execute(ctx context.Context, cmd *port.StartCommand) (*model.Se
 		} else {
 			session.Players[0].Mark = model.MarkX
 		}
-
 	}
 
 	session.Params.Seed = rng.Int63()

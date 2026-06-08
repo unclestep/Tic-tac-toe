@@ -3,20 +3,17 @@ package usecase
 import (
 	"context"
 	"fmt"
+
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
 )
 
-type BotMover interface {
-	MakeMove(session *model.Session, botMark model.Mark) error
-}
-
 type Disconnect struct {
 	sessionRepo port.SessionRepo
-	botMover    BotMover
+	botMover    port.BotMover
 }
 
-func NewDisconnect(sessionRepo port.SessionRepo, botMover BotMover) *Disconnect {
+func NewDisconnect(sessionRepo port.SessionRepo, botMover port.BotMover) *Disconnect {
 	return &Disconnect{
 		sessionRepo: sessionRepo,
 		botMover:    botMover,
@@ -42,7 +39,7 @@ func (uc *Disconnect) Execute(ctx context.Context, cmd *port.DisconnectCommand) 
 		return nil, wrap(err)
 	}
 
-	if turnPlayer.UUID == cmd.PlayerUUID {
+	if session.State == model.StatePlaying && turnPlayer.UUID == cmd.PlayerUUID {
 		if err := uc.botMover.MakeMove(session, turnPlayer.Mark); err != nil {
 			return nil, wrap(err)
 		}

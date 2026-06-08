@@ -3,22 +3,18 @@ package usecase
 import (
 	"context"
 	"fmt"
+
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
-	"tictactoe/pkg/geometry"
 )
-
-type HumanMover interface {
-	MakeMove(session *model.Session, player *model.Player, p geometry.Point) error
-}
 
 type MakeMove struct {
 	sessionRepo port.SessionRepo
-	humanMover  HumanMover
-	botMover    BotMover
+	humanMover  port.HumanMover
+	botMover    port.BotMover
 }
 
-func NewMakeMove(sessionRepo port.SessionRepo, humanMover HumanMover, botMover BotMover) *MakeMove {
+func NewMakeMove(sessionRepo port.SessionRepo, humanMover port.HumanMover, botMover port.BotMover) *MakeMove {
 	return &MakeMove{
 		sessionRepo: sessionRepo,
 		humanMover:  humanMover,

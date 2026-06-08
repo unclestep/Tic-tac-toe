@@ -3,7 +3,9 @@ package port
 import (
 	"context"
 	"errors"
+
 	"tictactoe/internal/domain/model"
+	"tictactoe/pkg/geometry"
 )
 
 var (
@@ -12,6 +14,14 @@ var (
 	ErrPlayerCantMakeMove       = errors.New("player cant make move")
 	ErrGameNotStarted           = errors.New("game not started")
 )
+
+type BotMover interface {
+	MakeMove(session *model.Session, botMark model.Mark) error
+}
+
+type HumanMover interface {
+	MakeMove(session *model.Session, player *model.Player, p geometry.Point) error
+}
 
 type CreateUseCase interface {
 	Execute(ctx context.Context, cmd *CreateCommand) (*model.Session, error)
