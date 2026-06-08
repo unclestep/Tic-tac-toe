@@ -12,8 +12,9 @@ import (
 
 func newTestSession(t *testing.T) *model.Session {
 	t.Helper()
+	board := model.NewBoard(3, 3)
 	rules := &model.Rules{UUID: "rules-1", BoardWidth: 3, BoardHeight: 3}
-	return model.NewSession("session-1", &model.SessionParams{Seed: 0}, rules)
+	return model.NewSession("session-1", &model.SessionParams{Seed: 0}, rules, board)
 }
 
 func newTestPlayer(uuid string, mark model.Mark) *model.Player {
@@ -25,10 +26,10 @@ func TestNewSessionInitialState(t *testing.T) {
 	rules := &model.Rules{UUID: "rules-1", BoardWidth: 3, BoardHeight: 3}
 	params := &model.SessionParams{Seed: 42}
 
-	s := model.NewSession("session-1", params, rules)
+	s := model.NewSession("session-1", params, rules, model.NewBoard(3, 3))
 
 	assert.Equal(t, "session-1", s.UUID)
-	assert.Equal(t, "rules-1", s.RulesID)
+	assert.Equal(t, "rules-1", s.Rules.UUID)
 	assert.Equal(t, model.StateLobby, s.State)
 	assert.NotNil(t, s.Board)
 	assert.Empty(t, s.Players)
@@ -44,7 +45,7 @@ func TestCloneSessionFieldsMatch(t *testing.T) {
 	clone := s.Clone()
 
 	assert.Equal(t, s.UUID, clone.UUID)
-	assert.Equal(t, s.RulesID, clone.RulesID)
+	assert.Equal(t, s.Rules.UUID, clone.Rules.UUID)
 	assert.Equal(t, s.Turn, clone.Turn)
 	assert.Equal(t, s.Winner, clone.Winner)
 	assert.Equal(t, s.State, clone.State)

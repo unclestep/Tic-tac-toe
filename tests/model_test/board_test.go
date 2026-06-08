@@ -119,7 +119,7 @@ func TestCloneMutationDoesNotAffectOriginal(t *testing.T) {
 	require.NoError(t, original.SetMark(model.MarkX, p))
 
 	clone := original.Clone()
-	require.NoError(t, clone.SetMark(model.MarkO, p))
+	clone.Cells[0] = model.MarkO
 
 	mark, err := original.GetMark(p)
 	require.NoError(t, err)
@@ -211,7 +211,8 @@ func TestSetMarkInvalidMark(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := newBoard(t, 3, 3)
 			assert.Panics(t, func() {
-				b.SetMark(tc.mark, geometry.NewPoint(0, 0))
+				err := b.SetMark(tc.mark, geometry.NewPoint(0, 0))
+				assert.Error(t, err)
 			})
 		})
 	}

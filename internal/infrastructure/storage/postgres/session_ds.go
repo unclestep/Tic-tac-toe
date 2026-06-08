@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	"tictactoe/internal/application/port"
 	dsmodel "tictactoe/internal/infrastructure/storage/model"
-
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -49,7 +49,7 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 	}
 
 	playersSQL := `
-		SELECT uuid, name, mark, bot
+		SELECT uuid, name, mark
 		FROM players
 		WHERE session_uuid = $1
 	`
@@ -61,7 +61,7 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 
 	for rows.Next() {
 		var p dsmodel.PlayerRecord
-		if err := rows.Scan(&p.UUID, &p.Name, &p.Mark, &p.Bot); err != nil {
+		if err := rows.Scan(&p.UUID, &p.Name, &p.Mark); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("fetch: scan player: %w", err)
 		}
@@ -121,7 +121,7 @@ func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.Sess
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT(session_uuid, mark) DO UPDATE
 		SET uuid = EXCLUDED.uuid,
-			name = EXCLUDED.name,
+			name = EXCLUDED.name
 	`
 
 	batch := &pgx.Batch{}

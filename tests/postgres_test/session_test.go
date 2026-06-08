@@ -32,10 +32,9 @@ func (s *PostgresSuite) prepareSessions() {
 				Cells:  []int8{1, 0, 0, 0, 0, 0, 0, 0, 1},
 			},
 			Players: []*dsmodel.PlayerRecord{
-				{UUID: "A", Name: "A", Mark: "X", Bot: false},
-				{UUID: "B", Name: "B", Mark: "O", Bot: false},
+				{UUID: "A", Name: "A", Mark: "X"},
+				{UUID: "B", Name: "B", Mark: "O"},
 			},
-			Bots:   0,
 			Turn:   0,
 			Winner: "",
 			State:  "Lobby",
@@ -50,9 +49,8 @@ func (s *PostgresSuite) prepareSessions() {
 				Cells:  []int8{0, 0, 0, 0},
 			},
 			Players: []*dsmodel.PlayerRecord{
-				{UUID: "Z", Name: "Z", Mark: "X", Bot: false},
+				{UUID: "Z", Name: "Z", Mark: "X"},
 			},
-			Bots:   1,
 			Turn:   0,
 			Winner: "A",
 			State:  "",
@@ -69,7 +67,7 @@ func (s *PostgresSuite) prepareSessions() {
 
 func (s *PostgresSuite) getAllSessions() []*dsmodel.SessionRecord {
 	sql := `
-		SELECT uuid, rules_uuid, board, bots, turn, winner, state, seed
+		SELECT uuid, rules_uuid, board, turn, winner, state, seed
 		FROM sessions
 	`
 
@@ -84,7 +82,7 @@ func (s *PostgresSuite) getAllSessions() []*dsmodel.SessionRecord {
 		var binBoard []byte
 		err := rows.Scan(
 			&session.UUID, &session.RulesUUID,
-			&binBoard, &session.Bots, &session.Turn, &session.Winner,
+			&binBoard, &session.Turn, &session.Winner,
 			&session.State, &session.Seed,
 		)
 		s.Require().NoError(err)
@@ -103,7 +101,7 @@ func (s *PostgresSuite) getAllSessions() []*dsmodel.SessionRecord {
 
 func (s *PostgresSuite) getAllPlayers() []*dsmodel.PlayerRecord {
 	sql := `
-		SELECT uuid, session_uuid, name, mark, bot
+		SELECT uuid, session_uuid, name, mark
 		FROM players
 	`
 
@@ -115,7 +113,7 @@ func (s *PostgresSuite) getAllPlayers() []*dsmodel.PlayerRecord {
 
 	for rows.Next() {
 		var p dsmodel.PlayerRecord
-		err := rows.Scan(&p.UUID, nil, &p.Name, &p.Mark, &p.Bot)
+		err := rows.Scan(&p.UUID, nil, &p.Name, &p.Mark)
 		s.Require().NoError(err)
 		players = append(players, &p)
 	}
@@ -129,7 +127,7 @@ func (s *PostgresSuite) getAllPlayers() []*dsmodel.PlayerRecord {
 
 func (s *PostgresSuite) getPlayersBySession(sessionUUID string) []*dsmodel.PlayerRecord {
 	sql := `
-		SELECT uuid, name, mark, bot
+		SELECT uuid, name, mark
 		FROM players
 		WHERE session_uuid = $1
 	`
@@ -142,7 +140,7 @@ func (s *PostgresSuite) getPlayersBySession(sessionUUID string) []*dsmodel.Playe
 
 	for rows.Next() {
 		var p dsmodel.PlayerRecord
-		err := rows.Scan(&p.UUID, &p.Name, &p.Mark, &p.Bot)
+		err := rows.Scan(&p.UUID, &p.Name, &p.Mark)
 		s.Require().NoError(err)
 		players = append(players, &p)
 	}
@@ -169,10 +167,9 @@ func (s *PostgresSuite) TestSessionStore() {
 				RulesUUID: "A",
 				Board:     &dsmodel.BoardRecord{Width: 1, Height: 1, Cells: []int8{1}},
 				Players: []*dsmodel.PlayerRecord{
-					{UUID: "A", Name: "A", Mark: "X", Bot: false},
-					{UUID: "B", Name: "B", Mark: "O", Bot: false},
+					{UUID: "A", Name: "A", Mark: "X"},
+					{UUID: "B", Name: "B", Mark: "O"},
 				},
-				Bots:   -1,
 				Turn:   -1,
 				Winner: "Someone",
 				State:  "GameOver",
@@ -184,7 +181,6 @@ func (s *PostgresSuite) TestSessionStore() {
 			sessions := s.getAllSessions()
 			for _, session := range sessions {
 				if session.UUID == "A" {
-					s.Equal(-1, session.Bots)
 					s.Equal(-1, session.Turn)
 					s.Equal("Someone", session.Winner)
 					s.Equal("GameOver", session.State)
@@ -201,10 +197,10 @@ func (s *PostgresSuite) TestSessionStore() {
 				RulesUUID: "A",
 				Board:     &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1, 0, 0, 0, 0, 0, 0, 0, 1}},
 				Players: []*dsmodel.PlayerRecord{
-					{UUID: "C", Name: "C", Mark: "X", Bot: false},
-					{UUID: "D", Name: "D", Mark: "O", Bot: false},
+					{UUID: "C", Name: "C", Mark: "X"},
+					{UUID: "D", Name: "D", Mark: "O"},
 				},
-				Bots: 0, Turn: 0, Winner: "", State: "Lobby", Seed: int64(0),
+				Turn: 0, Winner: "", State: "Lobby", Seed: int64(0),
 			}
 			err := ds.Store(context.Background(), updated)
 			s.Require().NoError(err)
@@ -252,43 +248,6 @@ func (s *PostgresSuite) TestSessionStore() {
 		}
 	})
 
-	s.Run("BotThenHuman", func() {
-		s.savepoint("bot_then_human", func() {
-			withBot := &dsmodel.SessionRecord{
-				UUID:      "A",
-				RulesUUID: "A",
-				Board:     &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1, 0, 0, 0, 0, 0, 0, 0, 1}},
-				Players: []*dsmodel.PlayerRecord{
-					{UUID: "BOT_1", Name: "Bot", Mark: "X", Bot: true},
-					{UUID: "B", Name: "B", Mark: "O", Bot: false},
-				},
-				Bots: 1, Turn: 0, Winner: "", State: "Lobby", Seed: 0,
-			}
-			s.Require().NoError(ds.Store(context.Background(), withBot))
-
-			withHuman := &dsmodel.SessionRecord{
-				UUID:      "A",
-				RulesUUID: "A",
-				Board:     &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1, 0, 0, 0, 0, 0, 0, 0, 1}},
-				Players: []*dsmodel.PlayerRecord{
-					{UUID: "HUMAN_2", Name: "Human", Mark: "X", Bot: false},
-					{UUID: "B", Name: "B", Mark: "O", Bot: false},
-				},
-				Bots: 0, Turn: 0, Winner: "", State: "Lobby", Seed: 0,
-			}
-			s.Require().NoError(ds.Store(context.Background(), withHuman))
-
-			players := s.getPlayersBySession("A")
-			s.Equal(2, len(players))
-			for _, p := range players {
-				if p.Mark == "X" {
-					s.Equal("HUMAN_2", p.UUID)
-					s.Equal(false, p.Bot)
-				}
-			}
-		})
-	})
-
 	s.Run("InvalidRulesReference", func() {
 		s.savepoint("invalid_rules_reference", func() {
 			session := &dsmodel.SessionRecord{
@@ -330,7 +289,6 @@ func (s *PostgresSuite) TestSessionFetch() {
 		s.Require().NoError(err)
 		s.Equal("A", r.UUID)
 		s.Equal("A", r.RulesUUID)
-		s.Equal(0, r.Bots)
 		s.Equal(0, r.Turn)
 		s.Equal("", r.Winner)
 		s.Equal("Lobby", r.State)
@@ -345,11 +303,9 @@ func (s *PostgresSuite) TestSessionFetch() {
 			case "X":
 				s.Equal("A", p.UUID)
 				s.Equal("A", p.Name)
-				s.Equal(false, p.Bot)
 			case "O":
 				s.Equal("B", p.UUID)
 				s.Equal("B", p.Name)
-				s.Equal(false, p.Bot)
 			default:
 				s.Fail("unexpected mark", p.Mark)
 			}
@@ -390,8 +346,8 @@ func (s *PostgresSuite) TestSessionFetch() {
 	s.Run("NilCellsRoundTrip", func() {
 		s.savepoint("fetch_nil_cells", func() {
 			_, err := s.tx.Exec(context.Background(), `
-            INSERT INTO sessions (uuid, rules_uuid, board, bots, turn, winner, state, seed)
-            VALUES ('nil-cells', 'A', '{"width":3,"height":3,"cells":null}'::jsonb, 0, 0, '', 'Lobby', 0)
+            INSERT INTO sessions (uuid, rules_uuid, board, turn, winner, state, seed)
+            VALUES ('nil-cells', 'A', '{"width":3,"height":3,"cells":null}'::jsonb, 0, '', 'Lobby', 0)
         `)
 			s.Require().NoError(err)
 
@@ -405,8 +361,8 @@ func (s *PostgresSuite) TestSessionFetch() {
 	s.Run("NilBoardRoundTrip", func() {
 		s.savepoint("fetch_nil_board", func() {
 			_, err := s.tx.Exec(context.Background(), `
-				INSERT INTO sessions (uuid, rules_uuid, board, bots, turn, winner, state, seed)
-				VALUES ('nil-board', 'A', 'null'::jsonb, 0, 0, '', 'Lobby', 0)
+				INSERT INTO sessions (uuid, rules_uuid, board, turn, winner, state, seed)
+				VALUES ('nil-board', 'A', 'null'::jsonb, 0, '', 'Lobby', 0)
 			`)
 			s.Require().NoError(err)
 

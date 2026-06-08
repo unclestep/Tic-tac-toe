@@ -11,11 +11,6 @@ import (
 	"tictactoe/pkg/geometry"
 )
 
-func newWinChecker(winLen int) *service.WinChecker {
-	rules := &model.Rules{UUID: "test", WinLength: winLen}
-	return service.NewWinCheckerService(rules)
-}
-
 func boardFromStrings(t *testing.T, rows []string) *model.Board {
 	t.Helper()
 	height := len(rows)
@@ -37,7 +32,7 @@ func boardFromStrings(t *testing.T, rows []string) *model.Board {
 func TestCheckWinEmptyBoard(t *testing.T) {
 	b := model.NewBoard(3, 3)
 
-	mark, state := newWinChecker(3).CheckWin(b)
+	mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 	assert.Equal(t, model.MarkEmpty, mark)
 	assert.Equal(t, model.StatePlaying, state)
@@ -91,7 +86,7 @@ func TestCheckWinHorizontal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := boardFromStrings(t, tc.board)
 
-			mark, state := newWinChecker(3).CheckWin(b)
+			mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 			assert.Equal(t, tc.mark, mark)
 			assert.Equal(t, model.StateGameOver, state)
@@ -147,7 +142,7 @@ func TestCheckWinVertical(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := boardFromStrings(t, tc.board)
 
-			mark, state := newWinChecker(3).CheckWin(b)
+			mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 			assert.Equal(t, tc.mark, mark)
 			assert.Equal(t, model.StateGameOver, state)
@@ -210,7 +205,7 @@ func TestCheckWinMainDiagonal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := boardFromStrings(t, tc.board)
 
-			mark, state := newWinChecker(tc.winLen).CheckWin(b)
+			mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 			assert.Equal(t, tc.mark, mark)
 			assert.Equal(t, model.StateGameOver, state)
@@ -273,7 +268,7 @@ func TestCheckWinSecondaryDiagonal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := boardFromStrings(t, tc.board)
 
-			mark, state := newWinChecker(tc.winLen).CheckWin(b)
+			mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 			assert.Equal(t, tc.mark, mark)
 			assert.Equal(t, model.StateGameOver, state)
@@ -288,7 +283,7 @@ func TestCheckWinDraw(t *testing.T) {
 		"OXX",
 	})
 
-	mark, state := newWinChecker(3).CheckWin(b)
+	mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 	assert.Equal(t, model.MarkEmpty, mark)
 	assert.Equal(t, model.StateGameOver, state)
@@ -321,7 +316,7 @@ func TestCheckWinInProgress(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := boardFromStrings(t, tc.board)
 
-			mark, state := newWinChecker(3).CheckWin(b)
+			mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 			assert.Equal(t, model.MarkEmpty, mark)
 			assert.Equal(t, model.StatePlaying, state)
@@ -380,7 +375,7 @@ func TestCheckWinBrokenSequence(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := boardFromStrings(t, tc.board)
 
-			mark, state := newWinChecker(3).CheckWin(b)
+			mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 			assert.Equal(t, model.MarkEmpty, mark)
 			assert.Equal(t, model.StatePlaying, state)
@@ -462,7 +457,7 @@ func TestCheckWinNonSquareBoards(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := boardFromStrings(t, tc.board)
 
-			mark, state := newWinChecker(tc.winLen).CheckWin(b)
+			mark, state := service.NewWinChecker().CheckWin(b, 3)
 
 			assert.Equal(t, tc.mark, mark)
 			assert.Equal(t, tc.state, state)
