@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - "**.go"
+      - "**.sql"
+      - "Dockerfile"
+
+jobs:
+  golangci-lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.3
+      - name: Setup Go environment
+        uses: actions/setup-go@v6.4.0
+        with:
+          go-version-file: "go.mod"
+      - name: Golangci-lint
+        uses: golangci/golangci-lint-action@v9.2.1
+      - name: pre-commit
+        uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: no-commit-to-branch
+
+  go-test:
+    name: test
+    needs: [golangci-lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.3
+      - name: Setup Go environment
+        uses: actions/setup-go@v6.4.0
+        with:
+          go-version-file: "go.mod"
+      - name: Download dependencies
+        run: go mod download
+      - name: Go Test
+        run: go test ./...
+
+  docker-image:
+    name: build and push Docker image
+    needs: [golangci-lint, go-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.3
+      - name: Setup Go environment
+        uses: actions/setup-go@v6.4.0
+        with:
+          go-version-file: "go.mod"
+      - name: Install swag
+        run: go install github.com/swaggo/swag/cmd/swag@latest
+      - name: Swagger init
+        run: swag init -g cmd/main.go
+      - name: Docker Setup Buildx
+        uses: docker/setup-buildx-action@v4.0.0
+      - name: Docker Login
+        uses: docker/login-action@v4.1.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v7.0.0
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/tic-tac-toe:latest
+          platforms: linux/amd64,linux/arm64
