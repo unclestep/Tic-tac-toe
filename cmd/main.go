@@ -7,11 +7,6 @@ import (
 	"tictactoe/internal/di"
 )
 
-// @title           Tic-Tac-Toe API
-// @version         1.0
-// @description     Tic-Tac-Toe Game API
-// @host            localhost:12121
-// @BasePath        /
 func main() {
 	_ = godotenv.Load(".env")
 	fx.New(di.TicTacToe).Run()

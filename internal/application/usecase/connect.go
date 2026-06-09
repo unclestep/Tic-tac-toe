@@ -35,11 +35,15 @@ func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*mode
 		return nil, wrap(model.ErrSessionFull)
 	}
 
-	player := model.NewPlayer(uuid.NewString(), cmd.PlayerName, am[rand.Intn(len(am))])
+	rng := rand.New(rand.NewSource(session.Params.Seed))
+
+	player := model.NewPlayer(uuid.NewString(), cmd.PlayerName, am[rng.Intn(len(am))])
 	err = session.AddPlayer(player)
 	if err != nil {
 		return nil, wrap(err)
 	}
+
+	session.Params.Seed = rng.Int63()
 
 	err = uc.sessionRepo.Save(ctx, session)
 	if err != nil {

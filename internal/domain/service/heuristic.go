@@ -16,11 +16,12 @@ func NewHeuristic() *Heuristic {
 
 func (h *Heuristic) Evaluate(board *model.Board, mark model.Mark, win int) float64 {
 	var score float64
+	dirs := geometry.GetAllDirs()
 
 	for r := 0; r < board.Height; r++ {
 		for c := 0; c < board.Width; c++ {
 			start := geometry.Point{X: c, Y: r}
-			for _, dir := range geometry.GetAllDirs() {
+			for _, dir := range dirs {
 				if h.lineFits(board, start, dir, win) {
 					score += h.evaluateLine(board, start, dir, win, mark, mark.Opposite())
 				}
