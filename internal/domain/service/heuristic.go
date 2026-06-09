@@ -2,23 +2,20 @@ package service
 
 import (
 	"fmt"
+	"math"
 
 	"tictactoe/internal/domain/model"
 	"tictactoe/pkg/geometry"
 )
 
-type Heuristic struct {
-	weights []int
-}
+type Heuristic struct{}
 
 func NewHeuristic() *Heuristic {
-	return &Heuristic{
-		weights: []int{0, 1, 10, 100, 1_000, 10_000, 100_000},
-	}
+	return &Heuristic{}
 }
 
-func (h *Heuristic) Evaluate(board *model.Board, mark model.Mark, win int) int {
-	score := 0
+func (h *Heuristic) Evaluate(board *model.Board, mark model.Mark, win int) float64 {
+	var score float64
 
 	for r := 0; r < board.Height; r++ {
 		for c := 0; c < board.Width; c++ {
@@ -40,8 +37,9 @@ func (h *Heuristic) lineFits(board *model.Board, start, dir geometry.Point, leng
 	return endX >= 0 && endX < board.Width && endY >= 0 && endY < board.Height
 }
 
-func (h *Heuristic) evaluateLine(board *model.Board, start, dir geometry.Point, length int, curMark, oppMark model.Mark) int {
-	selfCount, oppCount := 0, 0
+func (h *Heuristic) evaluateLine(board *model.Board, start, dir geometry.Point, length int, curMark, oppMark model.Mark) float64 {
+	var selfCount, oppCount float64
+
 	for i := range length {
 		p := geometry.Point{X: start.X + dir.X*i, Y: start.Y + dir.Y*i}
 		m, err := board.GetMark(p)
@@ -61,10 +59,10 @@ func (h *Heuristic) evaluateLine(board *model.Board, start, dir geometry.Point, 
 		return 0
 	}
 	if selfCount > 0 {
-		return h.weights[selfCount]
+		return math.Pow(10, selfCount)
 	}
 	if oppCount > 0 {
-		return -h.weights[oppCount]
+		return -math.Pow(10, oppCount)
 	}
 
 	return 0

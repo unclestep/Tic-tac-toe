@@ -55,11 +55,11 @@ var domain = fx.Module(
 	"Domain",
 	fx.Provide(fx.Annotate(
 		service.NewBotMovement,
-		fx.As(new(usecase.BotMover)),
+		fx.As(new(aport.BotMover)),
 	)),
 	fx.Provide(fx.Annotate(
 		service.NewHumanMovement,
-		fx.As(new(usecase.HumanMover)),
+		fx.As(new(aport.HumanMover)),
 	)),
 	fx.Provide(service.NewWinChecker),
 	fx.Provide(service.NewHeuristic),

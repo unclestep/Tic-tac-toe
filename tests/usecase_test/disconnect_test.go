@@ -81,6 +81,8 @@ func TestDisconnectBotMoveError(t *testing.T) {
 		model.NewPlayer("p1", "p1", model.MarkX),
 		model.NewPlayer("p2", "p2", model.MarkO),
 	)
+	session.State = model.StatePlaying
+
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
 
@@ -102,11 +104,11 @@ func TestDisconnectSaveSessionError(t *testing.T) {
 		model.NewPlayer("p1", "p1", model.MarkX),
 		model.NewPlayer("p2", "p2", model.MarkO),
 	)
+
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
 
 	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
-	bot.On("MakeMove", session, model.MarkX).Return(nil)
 	repo.On("Save", mock.Anything, session).Return(repoErr)
 
 	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
@@ -114,8 +116,6 @@ func TestDisconnectSaveSessionError(t *testing.T) {
 
 	assert.ErrorIs(t, err, repoErr)
 	repo.AssertExpectations(t)
-	bot.AssertExpectations(t)
-	bot.AssertExpectations(t)
 }
 
 func TestDisconnectTurnPlayerTriggersBotMove(t *testing.T) {
@@ -123,6 +123,8 @@ func TestDisconnectTurnPlayerTriggersBotMove(t *testing.T) {
 		model.NewPlayer("p1", "p1", model.MarkX),
 		model.NewPlayer("p2", "p2", model.MarkO),
 	)
+	session.State = model.StatePlaying
+
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
 

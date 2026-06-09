@@ -21,9 +21,9 @@ func NewBotMovement(winChecker *WinChecker, heuristic *Heuristic) *BotMovement {
 }
 
 const (
-	searchDepth = 4
-	winScore    = 1_000_000
-	drawScore   = 0
+	searchDepth int     = 4
+	winScore    float64 = 1_000_000
+	drawScore   float64 = 0
 )
 
 func (m *BotMovement) MakeMove(session *model.Session, botMark model.Mark) error {
@@ -34,7 +34,10 @@ func (m *BotMovement) MakeMove(session *model.Session, botMark model.Mark) error
 		return fmt.Errorf("bot make move (session %s): %w", session.UUID, model.ErrGameAlreadyOver)
 	}
 
-	_, bestCell := m.negamax(session, botMark, 0, searchDepth, math.MinInt+1, math.MaxInt)
+	_, bestCell := m.negamax(session, botMark, 0, searchDepth, math.Inf(-1), math.Inf(1))
+	if bestCell == nil {
+		return fmt.Errorf("bot make move: no available cells")
+	}
 
 	err := board.SetMark(botMark, *bestCell)
 	if err != nil {
@@ -51,7 +54,7 @@ func (m *BotMovement) MakeMove(session *model.Session, botMark model.Mark) error
 	return nil
 }
 
-func (m *BotMovement) negamax(session *model.Session, mark model.Mark, depth, remainingDepth, alpha, beta int) (int, *geometry.Point) {
+func (m *BotMovement) negamax(session *model.Session, mark model.Mark, depth, remainingDepth int, alpha, beta float64) (float64, *geometry.Point) {
 	board := session.Board
 
 	if winner, state := m.winChecker.CheckWin(board, session.Rules.WinLength); state == model.StateGameOver {
@@ -67,7 +70,7 @@ func (m *BotMovement) negamax(session *model.Session, mark model.Mark, depth, re
 		return m.heuristic.Evaluate(board, mark, session.Rules.WinLength), nil
 	}
 
-	bestScore := math.MinInt + 1
+	bestScore := math.Inf(-1)
 	var bestCell geometry.Point
 
 	for _, cell := range emptyCells {
@@ -97,12 +100,12 @@ func (m *BotMovement) negamax(session *model.Session, mark model.Mark, depth, re
 	return bestScore, &bestCell
 }
 
-func (m *BotMovement) terminalScore(winner, mark model.Mark, depth int) int {
+func (m *BotMovement) terminalScore(winner, mark model.Mark, depth int) float64 {
 	switch winner {
 	case mark:
-		return winScore - depth
+		return winScore - float64(depth)
 	case mark.Opposite():
-		return -winScore + depth
+		return -winScore + float64(depth)
 	}
 	return drawScore
 }
