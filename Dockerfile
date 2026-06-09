@@ -11,6 +11,6 @@ FROM scratch
 COPY --from=build-stage /app/server /server
 COPY --from=build-stage /app/docs /docs/
 COPY --from=build-stage /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-EXPOSE 8080
 USER 1001
+EXPOSE ${TICTACTOE_PORT}
 CMD ["/server"]

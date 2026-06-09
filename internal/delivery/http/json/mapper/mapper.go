@@ -1,7 +1,9 @@
 package mapper
 
 import (
+	"fmt"
 	"strings"
+
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/domain/model"
@@ -15,25 +17,36 @@ func ToSessionResponse(s *model.Session) dto.SessionResponse {
 		sb.Reset()
 		for j := range s.Board.Width {
 			p := geometry.NewPoint(j, i)
-			sb.WriteByte(markToByte(s.Board.GetMark(p)))
+			m, err := s.Board.GetMark(p)
+			if err != nil {
+				panic(fmt.Sprintf("to session response: %s", err))
+			}
+			sb.WriteByte(markToByte(m))
 		}
 		board[i] = sb.String()
 	}
 
-	players := make([]string, 0, len(s.Players))
-	for _, player := range s.Players {
-		players = append(players, player.Name)
-	}
-
 	resp := dto.SessionResponse{
-		SessionID: s.UUID,
-		State:     stateToString(s.State),
-		Board:     board,
-		Players:   players,
-		Winner:    s.Winner,
+		SessionUUID: s.UUID,
+		State:       stateToString(s.State),
+		Board:       board,
+		Players:     playersToResponse(s.Players),
+		Winner:      s.Winner,
 	}
 
 	return resp
+}
+
+func playersToResponse(players []*model.Player) []*dto.Player {
+	ps := make([]*dto.Player, 0, len(players))
+	for _, player := range players {
+		ps = append(ps, &dto.Player{
+			UUID: player.UUID,
+			Name: player.Name,
+			Mark: string(markToByte(player.Mark)),
+		})
+	}
+	return ps
 }
 
 func stateToString(state model.State) string {
@@ -51,11 +64,11 @@ func stateToString(state model.State) string {
 
 func markToByte(mark model.Mark) byte {
 	switch mark {
-	case model.Empty:
+	case model.MarkEmpty:
 		return ' '
-	case model.X:
+	case model.MarkX:
 		return 'X'
-	case model.O:
+	case model.MarkO:
 		return 'O'
 	default:
 		return '?'
@@ -64,8 +77,6 @@ func markToByte(mark model.Mark) byte {
 
 func ToCreateCommand(req *dto.CreateRequest) *port.CreateCommand {
 	return &port.CreateCommand{
-		PlayerID:   req.PlayerID,
-		PlayerName: req.PlayerName,
 		Rules: &model.Rules{
 			BoardWidth:  req.Rules.BoardWidth,
 			BoardHeight: req.Rules.BoardHeight,
@@ -79,30 +90,29 @@ func ToCreateCommand(req *dto.CreateRequest) *port.CreateCommand {
 
 func ToConnectCommand(req *dto.ConnectRequest) *port.ConnectCommand {
 	return &port.ConnectCommand{
-		SessionID:  req.SessionID,
-		PlayerID:   req.PlayerID,
-		PlayerName: req.PlayerName,
+		SessionUUID: req.SessionUUID,
+		PlayerName:  req.PlayerName,
 	}
 }
 
 func ToStartCommand(req *dto.StartRequest) *port.StartCommand {
 	return &port.StartCommand{
-		SessionID: req.SessionID,
-		PlayerID:  req.PlayerID,
+		SessionUUID: req.SessionUUID,
+		PlayerUUID:  req.PlayerUUID,
 	}
 }
 
 func ToMakeMoveCommand(req *dto.MakeMoveRequest) *port.MakeMoveCommand {
 	return &port.MakeMoveCommand{
-		SessionID: req.SessionID,
-		PlayerID:  req.PlayerID,
-		MarkPos:   req.MarkPos,
+		SessionUUID: req.SessionUUID,
+		PlayerUUID:  req.PlayerUUID,
+		MarkPos:     req.MarkPos,
 	}
 }
 
 func ToDisconnectCommand(req *dto.DisconnectRequest) *port.DisconnectCommand {
 	return &port.DisconnectCommand{
-		SessionID: req.SessionID,
-		PlayerID:  req.PlayerID,
+		SessionUUID: req.SessionUUID,
+		PlayerUUID:  req.PlayerUUID,
 	}
 }

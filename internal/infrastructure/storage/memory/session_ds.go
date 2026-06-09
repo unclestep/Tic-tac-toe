@@ -13,7 +13,7 @@ type SessionDataSource struct {
 	mu       sync.RWMutex
 }
 
-func NewMemorySessionDataSource() *SessionDataSource {
+func NewSessionDataSource() *SessionDataSource {
 	return &SessionDataSource{
 		sessions: make(map[string]*dsmodel.SessionRecord),
 	}

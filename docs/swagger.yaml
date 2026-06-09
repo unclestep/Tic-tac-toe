@@ -1,29 +1,24 @@
+basePath: /
 definitions:
   dto.ConnectRequest:
     properties:
-      player_id:
-        type: string
       player_name:
         type: string
-      session_id:
+      session_uuid:
         type: string
     type: object
   dto.CreateRequest:
     properties:
-      player_id:
-        type: string
-      player_name:
-        type: string
       rules:
-        $ref: '#/definitions/dto.Rules'
+        $ref: "#/definitions/dto.Rules"
       seed:
         type: integer
     type: object
   dto.DisconnectRequest:
     properties:
-      player_id:
+      player_uuid:
         type: string
-      session_id:
+      session_uuid:
         type: string
     type: object
   dto.ErrorResponse:
@@ -34,10 +29,19 @@ definitions:
   dto.MakeMoveRequest:
     properties:
       mark_pos:
-        $ref: '#/definitions/geometry.Point'
-      player_id:
+        $ref: "#/definitions/geometry.Point"
+      player_uuid:
         type: string
-      session_id:
+      session_uuid:
+        type: string
+    type: object
+  dto.Player:
+    properties:
+      mark:
+        type: string
+      name:
+        type: string
+      uuid:
         type: string
     type: object
   dto.Rules:
@@ -57,9 +61,9 @@ definitions:
         type: array
       players:
         items:
-          type: string
+          $ref: "#/definitions/dto.Player"
         type: array
-      session_id:
+      session_uuid:
         type: string
       state:
         type: string
@@ -68,9 +72,9 @@ definitions:
     type: object
   dto.StartRequest:
     properties:
-      player_id:
+      player_uuid:
         type: string
-      session_id:
+      session_uuid:
         type: string
     type: object
   geometry.Point:
@@ -80,152 +84,156 @@ definitions:
       "y":
         type: integer
     type: object
+host: localhost:12121
 info:
   contact: {}
+  description: Tic-Tac-Toe Game API
+  title: Tic-Tac-Toe API
+  version: "1.0"
 paths:
   /game/{session_id}/connect:
     post:
       parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      - description: Player's data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.ConnectRequest'
+        - description: Session ID
+          in: path
+          name: session_id
+          required: true
+          type: string
+        - description: Player's data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/dto.ConnectRequest"
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SessionResponse'
+            $ref: "#/definitions/dto.SessionResponse"
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
       summary: Connect a Player
       tags:
-      - game
+        - game
   /game/{session_id}/disconnect:
     post:
       parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      - description: Player's data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.DisconnectRequest'
+        - description: Session ID
+          in: path
+          name: session_id
+          required: true
+          type: string
+        - description: Player's data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/dto.DisconnectRequest"
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SessionResponse'
+            $ref: "#/definitions/dto.SessionResponse"
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
       summary: Disconnect a Player
       tags:
-      - game
+        - game
   /game/{session_id}/move:
     post:
       parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      - description: Move data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.MakeMoveRequest'
+        - description: Session ID
+          in: path
+          name: session_id
+          required: true
+          type: string
+        - description: Move data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/dto.MakeMoveRequest"
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SessionResponse'
+            $ref: "#/definitions/dto.SessionResponse"
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
       summary: Make a Move
       tags:
-      - game
+        - game
   /game/{session_id}/start:
     post:
       parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      - description: Player's data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.StartRequest'
+        - description: Session ID
+          in: path
+          name: session_id
+          required: true
+          type: string
+        - description: Player's data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/dto.StartRequest"
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SessionResponse'
+            $ref: "#/definitions/dto.SessionResponse"
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
       summary: Start a Game
       tags:
-      - game
+        - game
   /game/create:
     post:
       parameters:
-      - description: Game params
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateRequest'
+        - description: Game params
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/dto.CreateRequest"
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SessionResponse'
+            $ref: "#/definitions/dto.SessionResponse"
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: "#/definitions/dto.ErrorResponse"
       summary: Create a Game
       tags:
-      - game
+        - game
 swagger: "2.0"

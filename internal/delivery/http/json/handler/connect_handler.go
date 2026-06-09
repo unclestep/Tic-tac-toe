@@ -11,11 +11,13 @@ import (
 
 type ConnectHandler struct {
 	uc port.ConnectUseCase
+	em *ErrorMapper
 }
 
-func NewConnectHandler(uc port.ConnectUseCase) *ConnectHandler {
+func NewConnectHandler(uc port.ConnectUseCase, em *ErrorMapper) *ConnectHandler {
 	return &ConnectHandler{
 		uc: uc,
+		em: em,
 	}
 }
 
@@ -39,7 +41,7 @@ func (h *ConnectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.uc.Execute(r.Context(), cmd)
 	if err != nil {
-		writeError(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, err.Error(), h.em.Status(err))
 		return
 	}
 

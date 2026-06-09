@@ -5,10 +5,8 @@ import (
 )
 
 type CreateRequest struct {
-	PlayerID   string `json:"player_id"`
-	PlayerName string `json:"player_name"`
-	Rules      Rules  `json:"rules"`
-	Seed       int64  `json:"seed"`
+	Rules Rules `json:"rules"`
+	Seed  int64 `json:"seed"`
 }
 
 type Rules struct {
@@ -18,23 +16,22 @@ type Rules struct {
 }
 
 type ConnectRequest struct {
-	SessionID  string `json:"session_id"`
-	PlayerID   string `json:"player_id"`
-	PlayerName string `json:"player_name"`
+	SessionUUID string `json:"session_uuid"`
+	PlayerName  string `json:"player_name"`
 }
 
 type StartRequest struct {
-	SessionID string `json:"session_id"`
-	PlayerID  string `json:"player_id"`
+	SessionUUID string `json:"session_uuid"`
+	PlayerUUID  string `json:"player_uuid"`
 }
 
 type MakeMoveRequest struct {
-	SessionID string         `json:"session_id"`
-	PlayerID  string         `json:"player_id"`
-	MarkPos   geometry.Point `json:"mark_pos"`
+	SessionUUID string         `json:"session_uuid"`
+	PlayerUUID  string         `json:"player_uuid"`
+	MarkPos     geometry.Point `json:"mark_pos"`
 }
 
 type DisconnectRequest struct {
-	SessionID string `json:"session_id"`
-	PlayerID  string `json:"player_id"`
+	SessionUUID string `json:"session_uuid"`
+	PlayerUUID  string `json:"player_uuid"`
 }

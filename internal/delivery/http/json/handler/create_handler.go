@@ -11,11 +11,13 @@ import (
 
 type CreateHandler struct {
 	uc port.CreateUseCase
+	em *ErrorMapper
 }
 
-func NewCreateHandler(uc port.CreateUseCase) *CreateHandler {
+func NewCreateHandler(uc port.CreateUseCase, em *ErrorMapper) *CreateHandler {
 	return &CreateHandler{
 		uc: uc,
+		em: em,
 	}
 }
 
@@ -38,7 +40,7 @@ func (h *CreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.uc.Execute(r.Context(), cmd)
 	if err != nil {
-		writeError(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, err.Error(), h.em.Status(err))
 		return
 	}
 

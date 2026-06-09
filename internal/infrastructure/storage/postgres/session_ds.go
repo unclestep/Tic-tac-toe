@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	"tictactoe/internal/application/port"
 	dsmodel "tictactoe/internal/infrastructure/storage/model"
-
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -26,7 +26,7 @@ func NewSessionDataSource(dbtx DBTX) *SessionDataSource {
 
 func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmodel.SessionRecord, error) {
 	sessionSQL := `
-		SELECT uuid, rules_uuid, board, bots, turn, winner, state, seed
+		SELECT uuid, rules_uuid, board, turn, winner, state, seed
 		FROM sessions
 		WHERE uuid = $1
 	`
@@ -36,7 +36,7 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 
 	var sr dsmodel.SessionRecord
 	var binBoard []byte
-	err := ds.dbtx.QueryRow(ctx, sessionSQL, uuid).Scan(&sr.UUID, &sr.RulesUUID, &binBoard, &sr.Bots, &sr.Turn, &sr.Winner, &sr.State, &sr.Seed)
+	err := ds.dbtx.QueryRow(ctx, sessionSQL, uuid).Scan(&sr.UUID, &sr.RulesUUID, &binBoard, &sr.Turn, &sr.Winner, &sr.State, &sr.Seed)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("fetch: %w", port.ErrSessionNotFound)
@@ -49,7 +49,7 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 	}
 
 	playersSQL := `
-		SELECT uuid, name, mark, bot
+		SELECT uuid, name, mark
 		FROM players
 		WHERE session_uuid = $1
 	`
@@ -61,7 +61,7 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 
 	for rows.Next() {
 		var p dsmodel.PlayerRecord
-		if err := rows.Scan(&p.UUID, &p.Name, &p.Mark, &p.Bot); err != nil {
+		if err := rows.Scan(&p.UUID, &p.Name, &p.Mark); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("fetch: scan player: %w", err)
 		}
@@ -78,11 +78,10 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 
 func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.SessionRecord) error {
 	sessionSQL := `
-		INSERT INTO sessions (uuid, rules_uuid, board, bots, turn, winner, state, seed)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO sessions (uuid, rules_uuid, board, turn, winner, state, seed)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(uuid) DO UPDATE
 		SET board = EXCLUDED.board,
-			bots = EXCLUDED.bots,
 			turn = EXCLUDED.turn,
 			winner = EXCLUDED.winner,
 			state = EXCLUDED.state,
@@ -102,7 +101,7 @@ func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.Sess
 	defer cancel()
 
 	_, err = ds.dbtx.Exec(ctx, sessionSQL,
-		session.UUID, session.RulesUUID, binBoard, session.Bots,
+		session.UUID, session.RulesUUID, binBoard,
 		session.Turn, session.Winner, session.State, session.Seed,
 	)
 	var pgErr *pgconn.PgError
@@ -118,17 +117,16 @@ func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.Sess
 	}
 
 	playerSQL := `
-		INSERT INTO players (uuid, session_uuid, name, mark, bot)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO players (uuid, session_uuid, name, mark)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT(session_uuid, mark) DO UPDATE
 		SET uuid = EXCLUDED.uuid,
-			name = EXCLUDED.name,
-			bot = EXCLUDED.bot
+			name = EXCLUDED.name
 	`
 
 	batch := &pgx.Batch{}
 	for _, player := range session.Players {
-		batch.Queue(playerSQL, player.UUID, session.UUID, player.Name, player.Mark, player.Bot)
+		batch.Queue(playerSQL, player.UUID, session.UUID, player.Name, player.Mark)
 	}
 
 	br := ds.dbtx.SendBatch(ctx, batch)

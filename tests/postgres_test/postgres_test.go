@@ -56,7 +56,8 @@ func (s *PostgresSuite) SetupTest() {
 }
 
 func (s *PostgresSuite) TearDownTest() {
-	s.tx.Rollback(context.Background())
+	err := s.tx.Rollback(context.Background())
+	s.Require().NoError(err)
 }
 
 func TestPostgresSuite(t *testing.T) {

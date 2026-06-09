@@ -4,49 +4,57 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
+
 	"tictactoe/pkg/geometry"
 )
 
 var (
-	ErrInvalidConstructorArgs = errors.New("invalid board constructor args")
-	ErrSetPointOutOfBounds    = errors.New("set point is out of bounds")
-	ErrInvalidMark            = errors.New("invalid mark")
+	ErrOutOfBounds  = errors.New("point out of bounds")
+	ErrCellNotEmpty = errors.New("cell is not empty")
 )
 
 type Board struct {
 	Width  int
 	Height int
-	cells  []Mark
+	Cells  []Mark
 }
 
-type Mark int8
+func (b *Board) String() string {
+	var sb strings.Builder
+	size := len(b.Cells) + b.Height
+	sb.Grow(size)
 
-const (
-	Empty Mark = 0
-	X     Mark = 1
-	O     Mark = -1
-)
+	for i := range b.Height {
+		for j := range b.Width {
+			sb.WriteString(b.Cells[i*b.Width+j].String())
+		}
+		sb.WriteString("\n")
+	}
 
-func NewBoard(width, height int) (*Board, error) {
+	return sb.String()
+}
+
+func NewBoard(width, height int) *Board {
 	if width <= 0 || height <= 0 {
-		return nil, fmt.Errorf("%w: width %v, height %v", ErrInvalidConstructorArgs, width, height)
+		panic(fmt.Sprintf("new board: invalid dimensions %dx%d", width, height))
 	}
 	return &Board{
 		Width:  width,
 		Height: height,
-		cells:  make([]Mark, width*height),
-	}, nil
+		Cells:  make([]Mark, width*height),
+	}
 }
 
 func NewBoardFromCells(width, height int, cells []Mark) *Board {
 	if len(cells) != width*height {
-		return nil
+		panic(fmt.Sprintf("new board from cells: mismatched dimensions %dx%d with cells", width, height))
 	}
 
 	return &Board{
 		Width:  width,
 		Height: height,
-		cells:  cells,
+		Cells:  cells,
 	}
 }
 
@@ -54,41 +62,46 @@ func (b *Board) Clone() *Board {
 	return &Board{
 		Width:  b.Width,
 		Height: b.Height,
-		cells:  slices.Clone(b.cells),
+		Cells:  slices.Clone(b.Cells),
 	}
 }
 
 func (b *Board) CloneCells() []Mark {
-	return slices.Clone(b.cells)
+	return slices.Clone(b.Cells)
 }
 
 func (b *Board) Clear() {
-	clear(b.cells)
+	clear(b.Cells)
 }
 
 func (b *Board) ClearMark(p geometry.Point) error {
 	if !b.InBounds(p) {
-		return fmt.Errorf("%w: point %v, board width %v, board height %v", ErrSetPointOutOfBounds, p, b.Width, b.Height)
+		return fmt.Errorf("clear mark (point %v): %w", p, ErrOutOfBounds)
 	}
-	b.cells[b.Width*p.Y+p.X] = Empty
+	b.Cells[b.Width*p.Y+p.X] = MarkEmpty
 	return nil
 }
 
 func (b *Board) SetMark(m Mark, p geometry.Point) error {
-	if !b.InBounds(p) {
-		return fmt.Errorf("%w: point %v, board width %v, board height %v", ErrSetPointOutOfBounds, p, b.Width, b.Height)
-	}
 	if !b.IsValidMark(m) {
-		return fmt.Errorf("%w: given mark %v, valid: %v, %v", ErrInvalidMark, m, X, O)
+		panic(fmt.Sprintf("set mark (mark %v): invalid mark", m))
 	}
-	b.cells[b.Width*p.Y+p.X] = m
+	if !b.InBounds(p) {
+		return fmt.Errorf("set mark (point %v): %w", p, ErrOutOfBounds)
+	}
+
+	i := b.Width*p.Y + p.X
+	if b.Cells[i] != MarkEmpty {
+		return fmt.Errorf("set mark (point %v): %w", p, ErrCellNotEmpty)
+	}
+	b.Cells[i] = m
 	return nil
 }
 
 func (b *Board) GetEmptyCells() []geometry.Point {
 	emptyCells := make([]geometry.Point, 0, b.Height*b.Width)
-	for i, cell := range b.cells {
-		if cell == Empty {
+	for i, cell := range b.Cells {
+		if cell == MarkEmpty {
 			p := geometry.NewPoint(i%b.Width, i/b.Width)
 			emptyCells = append(emptyCells, p)
 		}
@@ -96,11 +109,11 @@ func (b *Board) GetEmptyCells() []geometry.Point {
 	return emptyCells
 }
 
-func (b *Board) GetMark(p geometry.Point) Mark {
+func (b *Board) GetMark(p geometry.Point) (Mark, error) {
 	if !b.InBounds(p) {
-		return Empty
+		return MarkEmpty, fmt.Errorf("get mark (point %v): %w", p, ErrOutOfBounds)
 	}
-	return b.cells[b.Width*p.Y+p.X]
+	return b.Cells[b.Width*p.Y+p.X], nil
 }
 
 func (b *Board) InBounds(p geometry.Point) bool {
@@ -108,5 +121,5 @@ func (b *Board) InBounds(p geometry.Point) bool {
 }
 
 func (b *Board) IsValidMark(m Mark) bool {
-	return m == X || m == O
+	return m == MarkX || m == MarkO
 }

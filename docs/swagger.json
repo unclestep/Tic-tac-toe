@@ -1,359 +1,359 @@
 {
-    "swagger": "2.0",
-    "info": {
-        "contact": {}
-    },
-    "paths": {
-        "/game/create": {
-            "post": {
-                "tags": [
-                    "game"
-                ],
-                "summary": "Create a Game",
-                "parameters": [
-                    {
-                        "description": "Game params",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.CreateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.SessionResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
+  "swagger": "2.0",
+  "info": {
+    "description": "Tic-Tac-Toe Game API",
+    "title": "Tic-Tac-Toe API",
+    "contact": {},
+    "version": "1.0"
+  },
+  "host": "localhost:12121",
+  "basePath": "/",
+  "paths": {
+    "/game/create": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Create a Game",
+        "parameters": [
+          {
+            "description": "Game params",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/dto.CreateRequest"
             }
-        },
-        "/game/{session_id}/connect": {
-            "post": {
-                "tags": [
-                    "game"
-                ],
-                "summary": "Connect a Player",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "session_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Player's data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.ConnectRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.SessionResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/dto.SessionResponse"
             }
-        },
-        "/game/{session_id}/disconnect": {
-            "post": {
-                "tags": [
-                    "game"
-                ],
-                "summary": "Disconnect a Player",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "session_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Player's data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.DisconnectRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.SessionResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
             }
-        },
-        "/game/{session_id}/move": {
-            "post": {
-                "tags": [
-                    "game"
-                ],
-                "summary": "Make a Move",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "session_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Move data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.MakeMoveRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.SessionResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
             }
-        },
-        "/game/{session_id}/start": {
-            "post": {
-                "tags": [
-                    "game"
-                ],
-                "summary": "Start a Game",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "session_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Player's data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.StartRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.SessionResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
+          }
         }
+      }
     },
-    "definitions": {
-        "dto.ConnectRequest": {
-            "type": "object",
-            "properties": {
-                "player_id": {
-                    "type": "string"
-                },
-                "player_name": {
-                    "type": "string"
-                },
-                "session_id": {
-                    "type": "string"
-                }
+    "/game/{session_id}/connect": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Connect a Player",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Session ID",
+            "name": "session_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Player's data",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/dto.ConnectRequest"
             }
-        },
-        "dto.CreateRequest": {
-            "type": "object",
-            "properties": {
-                "player_id": {
-                    "type": "string"
-                },
-                "player_name": {
-                    "type": "string"
-                },
-                "rules": {
-                    "$ref": "#/definitions/dto.Rules"
-                },
-                "seed": {
-                    "type": "integer"
-                }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/dto.SessionResponse"
             }
-        },
-        "dto.DisconnectRequest": {
-            "type": "object",
-            "properties": {
-                "player_id": {
-                    "type": "string"
-                },
-                "session_id": {
-                    "type": "string"
-                }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
             }
-        },
-        "dto.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string"
-                }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
             }
-        },
-        "dto.MakeMoveRequest": {
-            "type": "object",
-            "properties": {
-                "mark_pos": {
-                    "$ref": "#/definitions/geometry.Point"
-                },
-                "player_id": {
-                    "type": "string"
-                },
-                "session_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.Rules": {
-            "type": "object",
-            "properties": {
-                "board_height": {
-                    "type": "integer"
-                },
-                "board_width": {
-                    "type": "integer"
-                },
-                "win_length": {
-                    "type": "integer"
-                }
-            }
-        },
-        "dto.SessionResponse": {
-            "type": "object",
-            "properties": {
-                "board": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "players": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "session_id": {
-                    "type": "string"
-                },
-                "state": {
-                    "type": "string"
-                },
-                "winner": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.StartRequest": {
-            "type": "object",
-            "properties": {
-                "player_id": {
-                    "type": "string"
-                },
-                "session_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "geometry.Point": {
-            "type": "object",
-            "properties": {
-                "x": {
-                    "type": "integer"
-                },
-                "y": {
-                    "type": "integer"
-                }
-            }
+          }
         }
+      }
+    },
+    "/game/{session_id}/disconnect": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Disconnect a Player",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Session ID",
+            "name": "session_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Player's data",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/dto.DisconnectRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/dto.SessionResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/game/{session_id}/move": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Make a Move",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Session ID",
+            "name": "session_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Move data",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/dto.MakeMoveRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/dto.SessionResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/game/{session_id}/start": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Start a Game",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Session ID",
+            "name": "session_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Player's data",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/dto.StartRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/dto.SessionResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/dto.ErrorResponse"
+            }
+          }
+        }
+      }
     }
+  },
+  "definitions": {
+    "dto.ConnectRequest": {
+      "type": "object",
+      "properties": {
+        "player_name": {
+          "type": "string"
+        },
+        "session_uuid": {
+          "type": "string"
+        }
+      }
+    },
+    "dto.CreateRequest": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "$ref": "#/definitions/dto.Rules"
+        },
+        "seed": {
+          "type": "integer"
+        }
+      }
+    },
+    "dto.DisconnectRequest": {
+      "type": "object",
+      "properties": {
+        "player_uuid": {
+          "type": "string"
+        },
+        "session_uuid": {
+          "type": "string"
+        }
+      }
+    },
+    "dto.ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "dto.MakeMoveRequest": {
+      "type": "object",
+      "properties": {
+        "mark_pos": {
+          "$ref": "#/definitions/geometry.Point"
+        },
+        "player_uuid": {
+          "type": "string"
+        },
+        "session_uuid": {
+          "type": "string"
+        }
+      }
+    },
+    "dto.Player": {
+      "type": "object",
+      "properties": {
+        "mark": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "uuid": {
+          "type": "string"
+        }
+      }
+    },
+    "dto.Rules": {
+      "type": "object",
+      "properties": {
+        "board_height": {
+          "type": "integer"
+        },
+        "board_width": {
+          "type": "integer"
+        },
+        "win_length": {
+          "type": "integer"
+        }
+      }
+    },
+    "dto.SessionResponse": {
+      "type": "object",
+      "properties": {
+        "board": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "players": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dto.Player"
+          }
+        },
+        "session_uuid": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "winner": {
+          "type": "string"
+        }
+      }
+    },
+    "dto.StartRequest": {
+      "type": "object",
+      "properties": {
+        "player_uuid": {
+          "type": "string"
+        },
+        "session_uuid": {
+          "type": "string"
+        }
+      }
+    },
+    "geometry.Point": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        }
+      }
+    }
+  }
 }

@@ -7,7 +7,6 @@ type SessionRecord struct {
 	RulesUUID string
 	Board     *BoardRecord
 	Players   []*PlayerRecord
-	Bots      int
 	Turn      int
 	Winner    string
 	State     string
@@ -25,7 +24,6 @@ func (sr *SessionRecord) Clone() *SessionRecord {
 		RulesUUID: sr.RulesUUID,
 		Board:     sr.Board.Clone(),
 		Players:   players,
-		Bots:      sr.Bots,
 		Turn:      sr.Turn,
 		Winner:    sr.Winner,
 		State:     sr.State,

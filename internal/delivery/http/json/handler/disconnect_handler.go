@@ -11,11 +11,13 @@ import (
 
 type DisconnectHandler struct {
 	uc port.DisconnectUseCase
+	em *ErrorMapper
 }
 
-func NewDisconnectHandler(uc port.DisconnectUseCase) *DisconnectHandler {
+func NewDisconnectHandler(uc port.DisconnectUseCase, em *ErrorMapper) *DisconnectHandler {
 	return &DisconnectHandler{
 		uc: uc,
+		em: em,
 	}
 }
 
@@ -39,7 +41,7 @@ func (h *DisconnectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.uc.Execute(r.Context(), cmd)
 	if err != nil {
-		writeError(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, err.Error(), h.em.Status(err))
 		return
 	}
 

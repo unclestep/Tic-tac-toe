@@ -1,11 +1,17 @@
 package dto
 
 type SessionResponse struct {
-	SessionID string   `json:"session_id"`
-	State     string   `json:"state"`
-	Board     []string `json:"board"`
-	Winner    string   `json:"winner,omitempty"`
-	Players   []string `json:"players"`
+	SessionUUID string    `json:"session_uuid"`
+	State       string    `json:"state"`
+	Board       []string  `json:"board"`
+	Winner      string    `json:"winner,omitempty"`
+	Players     []*Player `json:"players"`
+}
+
+type Player struct {
+	UUID string `json:"uuid"`
+	Name string `json:"name"`
+	Mark string `json:"mark"`
 }
 
 type ErrorResponse struct {

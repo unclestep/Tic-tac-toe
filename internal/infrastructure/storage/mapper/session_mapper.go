@@ -9,10 +9,9 @@ import (
 func ToSessionStorage(s *dmodel.Session) *dsmodel.SessionRecord {
 	return &dsmodel.SessionRecord{
 		UUID:      s.UUID,
-		RulesUUID: s.RulesID,
+		RulesUUID: s.Rules.UUID,
 		Board:     toBoardStorage(s.Board),
 		Players:   convPlayersToStorage(s.Players),
-		Bots:      s.Bots,
 		Turn:      s.Turn,
 		Winner:    s.Winner,
 		State:     stateToString(s.State),
@@ -47,17 +46,16 @@ func toPlayerStorage(p *dmodel.Player) *dsmodel.PlayerRecord {
 		UUID: p.UUID,
 		Name: p.Name,
 		Mark: markToString(p.Mark),
-		Bot:  p.IsBot,
 	}
 }
 
 func markToString(mark dmodel.Mark) string {
 	switch mark {
-	case dmodel.X:
+	case dmodel.MarkX:
 		return "X"
-	case dmodel.O:
+	case dmodel.MarkO:
 		return "O"
-	case dmodel.Empty:
+	case dmodel.MarkEmpty:
 		return "Empty"
 	default:
 		return "Unknown"
@@ -90,10 +88,8 @@ func ToSessionDomain(r *dsmodel.SessionRecord) (*dmodel.Session, error) {
 
 	return &dmodel.Session{
 		UUID:    r.UUID,
-		RulesID: r.RulesUUID,
 		Board:   toBoardDomain(r.Board),
 		Players: players,
-		Bots:    r.Bots,
 		Turn:    r.Turn,
 		Winner:  r.Winner,
 		State:   state,
@@ -128,21 +124,20 @@ func toPlayerDomain(r *dsmodel.PlayerRecord) (*dmodel.Player, error) {
 	}
 
 	return &dmodel.Player{
-		UUID:  r.UUID,
-		Name:  r.Name,
-		Mark:  mark,
-		IsBot: r.Bot,
+		UUID: r.UUID,
+		Name: r.Name,
+		Mark: mark,
 	}, nil
 }
 
 func stringToMark(s string) (dmodel.Mark, error) {
 	switch s {
 	case "X":
-		return dmodel.X, nil
+		return dmodel.MarkX, nil
 	case "O":
-		return dmodel.O, nil
+		return dmodel.MarkO, nil
 	case "Empty":
-		return dmodel.Empty, nil
+		return dmodel.MarkEmpty, nil
 	default:
 		return 0, fmt.Errorf("unknown mark: %s", s)
 	}
