@@ -45,7 +45,18 @@ func NewPlayer(UUID, name string, mark Mark) *Player {
 	}
 }
 
+func NewBot(mark Mark) *Player {
+	return &Player{
+		UUID: "BOT",
+		Name: "BOT",
+		Mark: mark,
+	}
+}
+
 func (p *Player) Clone() *Player {
+	if p == nil {
+		return nil
+	}
 	return &Player{
 		UUID: p.UUID,
 		Name: p.Name,

@@ -35,8 +35,9 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 	defer cancel()
 
 	var sr dsmodel.SessionRecord
+	var winnerUUID *string
 	var binBoard []byte
-	err := ds.dbtx.QueryRow(ctx, sessionSQL, uuid).Scan(&sr.UUID, &sr.RulesUUID, &binBoard, &sr.Turn, &sr.Winner, &sr.State, &sr.Seed)
+	err := ds.dbtx.QueryRow(ctx, sessionSQL, uuid).Scan(&sr.UUID, &sr.RulesUUID, &binBoard, &sr.Turn, &winnerUUID, &sr.State, &sr.Seed)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("fetch: %w", port.ErrSessionNotFound)
@@ -66,6 +67,10 @@ func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmode
 			return nil, fmt.Errorf("fetch: scan player: %w", err)
 		}
 		sr.Players = append(sr.Players, &p)
+
+		if winnerUUID != nil && p.UUID == *winnerUUID {
+			sr.Winner = &p
+		}
 	}
 	rows.Close()
 
@@ -100,9 +105,14 @@ func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.Sess
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
+	var winner *string
+	if session.Winner != nil {
+		winner = &session.Winner.UUID
+	}
+
 	_, err = ds.dbtx.Exec(ctx, sessionSQL,
 		session.UUID, session.RulesUUID, binBoard,
-		session.Turn, session.Winner, session.State, session.Seed,
+		session.Turn, winner, session.State, session.Seed,
 	)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23503" {

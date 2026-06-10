@@ -4,7 +4,8 @@ type SessionResponse struct {
 	SessionUUID string    `json:"session_uuid"`
 	State       string    `json:"state"`
 	Board       []string  `json:"board"`
-	Winner      string    `json:"winner,omitempty"`
+	Winner      *Player   `json:"winner,omitempty"`
+	TurnPlayer  *Player   `json:"turn_player,omitempty"`
 	Players     []*Player `json:"players"`
 }
 

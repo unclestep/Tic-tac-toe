@@ -39,7 +39,7 @@ func TestNewSessionInitialState(t *testing.T) {
 func TestCloneSessionFieldsMatch(t *testing.T) {
 	s := newTestSession(t)
 	s.Turn = 3
-	s.Winner = "Alice"
+	s.Winner = model.NewPlayer("Alice", "Alice", model.MarkX)
 	s.State = model.StatePlaying
 
 	clone := s.Clone()
@@ -57,8 +57,12 @@ func TestCloneSessionParamsAreIndependent(t *testing.T) {
 	clone := s.Clone()
 
 	clone.Params.Seed = 999
+	clone.Winner = model.NewPlayer("Alice", "Alice", model.MarkX)
 
 	assert.NotEqual(t, s.Params.Seed, clone.Params.Seed)
+	assert.Nil(t, s.Winner)
+	assert.NotNil(t, clone.Winner)
+	assert.NotEqual(t, s.Winner, clone.Winner)
 }
 
 func TestCloneSessionBoardIsIndependent(t *testing.T) {

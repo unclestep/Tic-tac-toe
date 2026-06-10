@@ -15,6 +15,9 @@ func NewDefaultRules() *Rules {
 }
 
 func (r *Rules) Clone() *Rules {
+	if r == nil {
+		return nil
+	}
 	return &Rules{
 		UUID:        r.UUID,
 		BoardWidth:  r.BoardWidth,

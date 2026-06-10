@@ -16,9 +16,9 @@ CREATE TABLE sessions (
 );
 
 CREATE TABLE players (
-   uuid TEXT,
+   uuid TEXT PRIMARY KEY,
    session_uuid TEXT NOT NULL REFERENCES sessions(uuid) ON DELETE CASCADE,
    name TEXT NOT NULL,
    mark VARCHAR(1) NOT NULL,
-   PRIMARY KEY(session_uuid, mark)
+   UNIQUE(session_uuid, mark)
 );

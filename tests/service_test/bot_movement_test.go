@@ -58,7 +58,7 @@ func TestMakeMoveBotXWinsImmediately(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkX.String(), session.Winner)
+	assert.Equal(t, *model.NewBot(model.MarkX), *session.Winner)
 }
 
 func TestMakeMoveBotOWinsImmediately(t *testing.T) {
@@ -75,7 +75,7 @@ func TestMakeMoveBotOWinsImmediately(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkO.String(), session.Winner)
+	assert.Equal(t, *model.NewBot(model.MarkO), *session.Winner)
 }
 
 func TestMakeMovePrefersWinOverBlock(t *testing.T) {
@@ -92,7 +92,7 @@ func TestMakeMovePrefersWinOverBlock(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkX.String(), session.Winner)
+	assert.Equal(t, *model.NewBot(model.MarkX), *session.Winner)
 }
 
 func TestMakeMoveBotXBlocksO(t *testing.T) {
@@ -142,7 +142,7 @@ func TestMakeMoveDraw(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkEmpty.String(), session.Winner)
+	assert.Nil(t, session.Winner)
 }
 
 func TestMakeMoveTurnIncrements(t *testing.T) {

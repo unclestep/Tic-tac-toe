@@ -8,7 +8,7 @@ type SessionRecord struct {
 	Board     *BoardRecord
 	Players   []*PlayerRecord
 	Turn      int
-	Winner    string
+	Winner    *PlayerRecord
 	State     string
 	Seed      int64
 }

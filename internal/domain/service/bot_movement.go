@@ -46,7 +46,9 @@ func (m *BotMovement) MakeMove(session *model.Session, botMark model.Mark) error
 
 	mark, state := m.winChecker.CheckWin(board, session.Rules.WinLength)
 	if state == model.StateGameOver {
-		session.Winner = mark.String()
+		if mark != model.MarkEmpty {
+			session.Winner = model.NewBot(mark)
+		}
 		session.State = model.StateGameOver
 	}
 	session.Turn++

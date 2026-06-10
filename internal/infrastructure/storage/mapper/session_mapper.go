@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"fmt"
+
 	dmodel "tictactoe/internal/domain/model"
 	dsmodel "tictactoe/internal/infrastructure/storage/model"
 )
@@ -13,7 +14,7 @@ func ToSessionStorage(s *dmodel.Session) *dsmodel.SessionRecord {
 		Board:     toBoardStorage(s.Board),
 		Players:   convPlayersToStorage(s.Players),
 		Turn:      s.Turn,
-		Winner:    s.Winner,
+		Winner:    toPlayerStorage(s.Winner),
 		State:     stateToString(s.State),
 		Seed:      s.Params.Seed,
 	}
@@ -42,6 +43,9 @@ func convPlayersToStorage(players []*dmodel.Player) []*dsmodel.PlayerRecord {
 }
 
 func toPlayerStorage(p *dmodel.Player) *dsmodel.PlayerRecord {
+	if p == nil {
+		return nil
+	}
 	return &dsmodel.PlayerRecord{
 		UUID: p.UUID,
 		Name: p.Name,
@@ -86,12 +90,14 @@ func ToSessionDomain(r *dsmodel.SessionRecord) (*dmodel.Session, error) {
 		return nil, fmt.Errorf("to session domain: %w", err)
 	}
 
+	winner, err := toPlayerDomain(r.Winner)
+
 	return &dmodel.Session{
 		UUID:    r.UUID,
 		Board:   toBoardDomain(r.Board),
 		Players: players,
 		Turn:    r.Turn,
-		Winner:  r.Winner,
+		Winner:  winner,
 		State:   state,
 		Params:  &dmodel.SessionParams{Seed: r.Seed},
 	}, nil
@@ -118,6 +124,10 @@ func convPlayersToDomain(records []*dsmodel.PlayerRecord) ([]*dmodel.Player, err
 }
 
 func toPlayerDomain(r *dsmodel.PlayerRecord) (*dmodel.Player, error) {
+	if r == nil {
+		return nil, fmt.Errorf("to player domain: nil player passed")
+	}
+
 	mark, err := stringToMark(r.Mark)
 	if err != nil {
 		return nil, fmt.Errorf("to player domain: %w", err)

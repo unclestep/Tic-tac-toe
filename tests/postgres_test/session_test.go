@@ -35,10 +35,9 @@ func (s *PostgresSuite) prepareSessions() {
 				{UUID: "A", Name: "A", Mark: "X"},
 				{UUID: "B", Name: "B", Mark: "O"},
 			},
-			Turn:   0,
-			Winner: "",
-			State:  "Lobby",
-			Seed:   int64(0),
+			Turn:  0,
+			State: "Lobby",
+			Seed:  int64(0),
 		},
 		{
 			UUID:      "B",
@@ -51,10 +50,12 @@ func (s *PostgresSuite) prepareSessions() {
 			Players: []*dsmodel.PlayerRecord{
 				{UUID: "Z", Name: "Z", Mark: "X"},
 			},
-			Turn:   0,
-			Winner: "A",
-			State:  "",
-			Seed:   int64(0),
+			Turn: 0,
+			Winner: &dsmodel.PlayerRecord{
+				UUID: "A", Name: "A", Mark: "X",
+			},
+			State: "",
+			Seed:  int64(0),
 		},
 	}
 
@@ -79,16 +80,27 @@ func (s *PostgresSuite) getAllSessions() []*dsmodel.SessionRecord {
 
 	for rows.Next() {
 		var session dsmodel.SessionRecord
+		var winnerUUID string
 		var binBoard []byte
 		err := rows.Scan(
 			&session.UUID, &session.RulesUUID,
-			&binBoard, &session.Turn, &session.Winner,
+			&binBoard, &session.Turn, &winnerUUID,
 			&session.State, &session.Seed,
 		)
 		s.Require().NoError(err)
 
 		err = json.Unmarshal(binBoard, &session.Board)
 		s.Require().NoError(err)
+
+		players := s.getPlayersBySession(session.UUID)
+		for _, p := range players {
+			if p.UUID == winnerUUID {
+				session.Winner = p
+				break
+			}
+		}
+		session.Players = players
+
 		ss = append(ss, &session)
 	}
 
@@ -170,10 +182,9 @@ func (s *PostgresSuite) TestSessionStore() {
 					{UUID: "A", Name: "A", Mark: "X"},
 					{UUID: "B", Name: "B", Mark: "O"},
 				},
-				Turn:   -1,
-				Winner: "Someone",
-				State:  "GameOver",
-				Seed:   int64(-1),
+				Turn:  -1,
+				State: "GameOver",
+				Seed:  int64(-1),
 			}
 			err := ds.Store(context.Background(), updated)
 			s.Require().NoError(err)
@@ -182,7 +193,6 @@ func (s *PostgresSuite) TestSessionStore() {
 			for _, session := range sessions {
 				if session.UUID == "A" {
 					s.Equal(-1, session.Turn)
-					s.Equal("Someone", session.Winner)
 					s.Equal("GameOver", session.State)
 					s.Equal(int64(-1), session.Seed)
 				}
@@ -200,7 +210,7 @@ func (s *PostgresSuite) TestSessionStore() {
 					{UUID: "C", Name: "C", Mark: "X"},
 					{UUID: "D", Name: "D", Mark: "O"},
 				},
-				Turn: 0, Winner: "", State: "Lobby", Seed: int64(0),
+				Turn: 0, State: "Lobby", Seed: int64(0),
 			}
 			err := ds.Store(context.Background(), updated)
 			s.Require().NoError(err)

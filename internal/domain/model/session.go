@@ -10,7 +10,7 @@ type Session struct {
 	Board   *Board
 	Players []*Player
 	Turn    int
-	Winner  string
+	Winner  *Player
 	State   State
 	Params  *SessionParams
 	Rules   *Rules
@@ -49,12 +49,15 @@ func NewSession(sessionUUID string, params *SessionParams, rules *Rules, board *
 }
 
 func (s *Session) Clone() *Session {
+	if s == nil {
+		return nil
+	}
 	return &Session{
 		UUID:    s.UUID,
 		Board:   s.Board.Clone(),
 		Players: s.ClonePlayers(),
 		Turn:    s.Turn,
-		Winner:  s.Winner,
+		Winner:  s.Winner.Clone(),
 		State:   s.State,
 		Params: &SessionParams{
 			Seed: s.Params.Seed,
@@ -74,7 +77,7 @@ func (s *Session) ClonePlayers() []*Player {
 func (s *Session) Start() {
 	s.State = StatePlaying
 	s.Board.Clear()
-	s.Winner = ""
+	s.Winner = nil
 	s.Turn = 0
 }
 

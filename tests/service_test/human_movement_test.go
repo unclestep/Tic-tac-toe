@@ -82,7 +82,7 @@ func TestMakeXWins(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkX.String(), session.Winner)
+	assert.Equal(t, *playerX, *session.Winner)
 	assert.Equal(t, 1, session.Turn)
 }
 
@@ -96,7 +96,7 @@ func TestMakeOWins(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkO.String(), session.Winner)
+	assert.Equal(t, *playerO, *session.Winner)
 	assert.Equal(t, 1, session.Turn)
 }
 
@@ -111,7 +111,7 @@ func TestMakeDraw(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkEmpty.String(), session.Winner)
+	assert.Nil(t, session.Winner)
 	assert.Equal(t, 1, session.Turn)
 }
 

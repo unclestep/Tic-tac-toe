@@ -27,12 +27,15 @@ func ToSessionResponse(s *model.Session) dto.SessionResponse {
 		board[i] = sb.String()
 	}
 
+	turnPlayer, _ := s.GetTurnPlayer() //nolint:errcheck
+
 	resp := dto.SessionResponse{
 		SessionUUID: s.UUID,
 		State:       stateToString(s.State),
 		Board:       board,
+		Winner:      playerToResponse(s.Winner),
+		TurnPlayer:  playerToResponse(turnPlayer),
 		Players:     playersToResponse(s.Players),
-		Winner:      s.Winner,
 	}
 
 	return resp
@@ -47,13 +50,20 @@ func ToUserReposnse(user *model.User) dto.UserResponse {
 func playersToResponse(players []*model.Player) []*dto.Player {
 	ps := make([]*dto.Player, 0, len(players))
 	for _, player := range players {
-		ps = append(ps, &dto.Player{
-			UUID: player.UUID,
-			Name: player.Name,
-			Mark: string(markToByte(player.Mark)),
-		})
+		ps = append(ps, playerToResponse(player))
 	}
 	return ps
+}
+
+func playerToResponse(player *model.Player) *dto.Player {
+	if player == nil {
+		return nil
+	}
+	return &dto.Player{
+		UUID: player.UUID,
+		Name: player.Name,
+		Mark: string(markToByte(player.Mark)),
+	}
 }
 
 func stateToString(state model.State) string {
