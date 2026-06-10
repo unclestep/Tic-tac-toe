@@ -7,13 +7,17 @@ import (
 	"net/http"
 	"os"
 
-	aport "tictactoe/internal/application/port"
+	"tictactoe/internal/application/port"
 	"tictactoe/internal/application/usecase"
 	httpDelivery "tictactoe/internal/delivery/http"
+	"tictactoe/internal/delivery/http/json"
 	"tictactoe/internal/delivery/http/json/handler"
+	"tictactoe/internal/delivery/http/json/middleware"
 	"tictactoe/internal/domain/service"
-	"tictactoe/internal/infrastructure/storage/memory"
-	sport "tictactoe/internal/infrastructure/storage/port"
+
+	// "tictactoe/internal/infrastructure/storage/memory"
+	"tictactoe/internal/infrastructure/storage/ds"
+	"tictactoe/internal/infrastructure/storage/postgres"
 	"tictactoe/internal/infrastructure/storage/repository"
 
 	"go.uber.org/fx"
@@ -24,14 +28,14 @@ var TicTacToe = fx.Module(
 	domain,
 	app,
 	repo,
-	ds,
+	dataSource,
 	delivery,
 	fx.Invoke(registerServer),
 )
 
 func registerServer(lc fx.Lifecycle, router *httpDelivery.Router) {
 	server := http.Server{
-		Handler: router.Handler(),
+		Handler: middleware.WithRecovery(router.Handler()),
 		Addr:    os.Getenv("TICTACTOE_ADDR"),
 	}
 
@@ -55,11 +59,15 @@ var domain = fx.Module(
 	"Domain",
 	fx.Provide(fx.Annotate(
 		service.NewBotMovement,
-		fx.As(new(aport.BotMover)),
+		fx.As(new(port.BotMover)),
 	)),
 	fx.Provide(fx.Annotate(
 		service.NewHumanMovement,
-		fx.As(new(aport.HumanMover)),
+		fx.As(new(port.HumanMover)),
+	)),
+	fx.Provide(fx.Annotate(
+		service.NewUserService,
+		fx.As(new(port.UserService)),
 	)),
 	fx.Provide(service.NewWinChecker),
 	fx.Provide(service.NewHeuristic),
@@ -69,23 +77,31 @@ var app = fx.Module(
 	"Application",
 	fx.Provide(fx.Annotate(
 		usecase.NewConnect,
-		fx.As(new(aport.ConnectUseCase)),
+		fx.As(new(port.ConnectUseCase)),
 	)),
 	fx.Provide(fx.Annotate(
 		usecase.NewCreate,
-		fx.As(new(aport.CreateUseCase)),
+		fx.As(new(port.CreateUseCase)),
 	)),
 	fx.Provide(fx.Annotate(
 		usecase.NewStart,
-		fx.As(new(aport.StartUseCase)),
+		fx.As(new(port.StartUseCase)),
 	)),
 	fx.Provide(fx.Annotate(
 		usecase.NewMakeMove,
-		fx.As(new(aport.MakeMoveUseCase)),
+		fx.As(new(port.MakeMoveUseCase)),
 	)),
 	fx.Provide(fx.Annotate(
 		usecase.NewDisconnect,
-		fx.As(new(aport.DisconnectUseCase)),
+		fx.As(new(port.DisconnectUseCase)),
+	)),
+	fx.Provide(fx.Annotate(
+		usecase.NewSignUp,
+		fx.As(new(usecase.SignUpUseCase)),
+	)),
+	fx.Provide(fx.Annotate(
+		usecase.NewSignIn,
+		fx.As(new(usecase.SignInUseCase)),
 	)),
 )
 
@@ -93,23 +109,34 @@ var repo = fx.Module(
 	"Repository",
 	fx.Provide(fx.Annotate(
 		repository.NewRulesRepo,
-		fx.As(new(aport.RulesRepo)),
+		fx.As(new(port.RulesRepo)),
 	)),
 	fx.Provide(fx.Annotate(
 		repository.NewSessionRepo,
-		fx.As(new(aport.SessionRepo)),
+		fx.As(new(port.SessionRepo)),
+	)),
+	fx.Provide(fx.Annotate(
+		repository.NewUserRepo,
+		fx.As(new(port.UserRepo)),
 	)),
 )
 
-var ds = fx.Module(
+var dataSource = fx.Module(
 	"DataSource",
+	fx.Provide(func() (postgres.DBTX, error) {
+		return postgres.NewPool(context.Background(), os.Getenv("POSTGRES_DSN"))
+	}),
 	fx.Provide(fx.Annotate(
-		memory.NewRulesDataSource,
-		fx.As(new(sport.RulesDataSource)),
+		postgres.NewRulesDataSource,
+		fx.As(new(ds.RulesDataSource)),
 	)),
 	fx.Provide(fx.Annotate(
-		memory.NewSessionDataSource,
-		fx.As(new(sport.SessionDataSource)),
+		postgres.NewSessionDataSource,
+		fx.As(new(ds.SessionDataSource)),
+	)),
+	fx.Provide(fx.Annotate(
+		postgres.NewUserDataSource,
+		fx.As(new(ds.UserDataSource)),
 	)),
 )
 
@@ -141,6 +168,17 @@ var delivery = fx.Module(
 		fx.ResultTags(`name:"disconnect_h"`),
 	)),
 	fx.Provide(fx.Annotate(
+		handler.NewSignUpHandler,
+		fx.As(new(http.Handler)),
+		fx.ResultTags(`name:"signup_h"`),
+	)),
+	fx.Provide(fx.Annotate(
+		handler.NewSignInHandler,
+		fx.As(new(http.Handler)),
+		fx.ResultTags(`name:"signin_h"`),
+	)),
+	fx.Provide(middleware.NewUserAuthenticator),
+	fx.Provide(fx.Annotate(
 		httpDelivery.NewRouter,
 		fx.ParamTags(
 			`name:"create_h"`,
@@ -148,7 +186,9 @@ var delivery = fx.Module(
 			`name:"start_h"`,
 			`name:"makemove_h"`,
 			`name:"disconnect_h"`,
+			`name:"signup_h"`,
+			`name:"signin_h"`,
 		),
 	)),
-	fx.Provide(handler.NewErrorMapper),
+	fx.Provide(json.NewErrorMapper),
 )

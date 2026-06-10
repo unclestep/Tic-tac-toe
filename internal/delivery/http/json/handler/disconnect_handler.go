@@ -5,16 +5,17 @@ import (
 	"net/http"
 
 	"tictactoe/internal/application/port"
+	jsonDelivery "tictactoe/internal/delivery/http/json"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/delivery/http/json/mapper"
 )
 
 type DisconnectHandler struct {
 	uc port.DisconnectUseCase
-	em *ErrorMapper
+	em *jsonDelivery.ErrorMapper
 }
 
-func NewDisconnectHandler(uc port.DisconnectUseCase, em *ErrorMapper) *DisconnectHandler {
+func NewDisconnectHandler(uc port.DisconnectUseCase, em *jsonDelivery.ErrorMapper) *DisconnectHandler {
 	return &DisconnectHandler{
 		uc: uc,
 		em: em,
@@ -23,6 +24,7 @@ func NewDisconnectHandler(uc port.DisconnectUseCase, em *ErrorMapper) *Disconnec
 
 // @Summary     Disconnect a Player
 // @Tags        game
+// @Security    BasicAuth
 // @Param  session_id  path  string  true  "Session ID"
 // @Param       body       body     dto.DisconnectRequest true "Player's data"
 // @Success     200        {object} dto.SessionResponse
@@ -33,7 +35,7 @@ func (h *DisconnectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req dto.DisconnectRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "invalid request body", http.StatusBadRequest)
+		jsonDelivery.WriteError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -41,9 +43,9 @@ func (h *DisconnectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.uc.Execute(r.Context(), cmd)
 	if err != nil {
-		writeError(w, err.Error(), h.em.Status(err))
+		jsonDelivery.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
 
-	writeJSON(w, mapper.ToSessionResponse(session), http.StatusOK)
+	jsonDelivery.WriteJSON(w, mapper.ToSessionResponse(session), http.StatusOK)
 }

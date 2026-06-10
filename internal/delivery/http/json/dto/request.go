@@ -35,3 +35,13 @@ type DisconnectRequest struct {
 	SessionUUID string `json:"session_uuid"`
 	PlayerUUID  string `json:"player_uuid"`
 }
+
+type SignUpRequest struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+}
+
+type SignInRequest struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+}

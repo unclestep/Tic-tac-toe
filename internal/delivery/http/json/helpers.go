@@ -1,9 +1,10 @@
-package handler
+package json
 
 import (
 	"encoding/json"
 	"errors"
 	"net/http"
+
 	"tictactoe/internal/application/port"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/domain/model"
@@ -34,6 +35,7 @@ func NewErrorMapper() *ErrorMapper {
 			{port.ErrGameAlreadyStarted, http.StatusBadRequest},
 			{port.ErrPlayerNotBelongToSession, http.StatusConflict},
 			{port.ErrPlayerCantMakeMove, http.StatusConflict},
+			{port.ErrInvalidCredentials, http.StatusUnauthorized},
 		},
 	}
 }
@@ -47,7 +49,7 @@ func (m *ErrorMapper) Status(err error) int {
 	return http.StatusInternalServerError
 }
 
-func writeJSON(w http.ResponseWriter, v any, status int) {
+func WriteJSON(w http.ResponseWriter, v any, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
@@ -55,6 +57,6 @@ func writeJSON(w http.ResponseWriter, v any, status int) {
 	}
 }
 
-func writeError(w http.ResponseWriter, msg string, status int) {
-	writeJSON(w, dto.ErrorResponse{Error: msg}, status)
+func WriteError(w http.ResponseWriter, msg string, status int) {
+	WriteJSON(w, dto.ErrorResponse{Error: msg}, status)
 }

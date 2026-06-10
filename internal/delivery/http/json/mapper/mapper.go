@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"tictactoe/internal/application/port"
+	"tictactoe/internal/application/usecase"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/domain/model"
 	"tictactoe/pkg/geometry"
@@ -35,6 +36,12 @@ func ToSessionResponse(s *model.Session) dto.SessionResponse {
 	}
 
 	return resp
+}
+
+func ToUserReposnse(user *model.User) dto.UserResponse {
+	return dto.UserResponse{
+		UUID: user.UUID,
+	}
 }
 
 func playersToResponse(players []*model.Player) []*dto.Player {
@@ -114,5 +121,19 @@ func ToDisconnectCommand(req *dto.DisconnectRequest) *port.DisconnectCommand {
 	return &port.DisconnectCommand{
 		SessionUUID: req.SessionUUID,
 		PlayerUUID:  req.PlayerUUID,
+	}
+}
+
+func ToSignUpCommand(req *dto.SignUpRequest) *usecase.SignUpCommand {
+	return &usecase.SignUpCommand{
+		Login:    req.Login,
+		Password: req.Password,
+	}
+}
+
+func ToSignInCommand(req *dto.SignInRequest) *usecase.SignInCommand {
+	return &usecase.SignInCommand{
+		Login:    req.Login,
+		Password: req.Password,
 	}
 }

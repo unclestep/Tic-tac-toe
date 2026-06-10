@@ -22,7 +22,7 @@ type PostgresSuite struct {
 func (s *PostgresSuite) SetupSuite() {
 	ctx := context.Background()
 	container, err := postgres.Run(
-		ctx, "postgres:18-alpine",
+		ctx, "postgres:18.3-alpine",
 		postgres.WithDatabase("testdb"),
 		postgres.WithUsername("user"),
 		postgres.WithPassword("password"),

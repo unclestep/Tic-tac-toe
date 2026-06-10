@@ -17,3 +17,7 @@ type Player struct {
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
+
+type UserResponse struct {
+	UUID string `json:"uuid"`
+}

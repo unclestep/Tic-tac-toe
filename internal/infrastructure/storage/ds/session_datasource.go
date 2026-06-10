@@ -1,7 +1,8 @@
-package port
+package ds
 
 import (
 	"context"
+
 	"tictactoe/internal/infrastructure/storage/model"
 )
 

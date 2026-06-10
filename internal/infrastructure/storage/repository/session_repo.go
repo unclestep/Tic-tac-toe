@@ -3,17 +3,18 @@ package repository
 import (
 	"context"
 	"fmt"
+
 	"tictactoe/internal/domain/model"
+	"tictactoe/internal/infrastructure/storage/ds"
 	"tictactoe/internal/infrastructure/storage/mapper"
-	storagePort "tictactoe/internal/infrastructure/storage/port"
 )
 
 type SessionRepo struct {
-	sds storagePort.SessionDataSource
-	rds storagePort.RulesDataSource
+	sds ds.SessionDataSource
+	rds ds.RulesDataSource
 }
 
-func NewSessionRepo(sds storagePort.SessionDataSource, rds storagePort.RulesDataSource) *SessionRepo {
+func NewSessionRepo(sds ds.SessionDataSource, rds ds.RulesDataSource) *SessionRepo {
 	return &SessionRepo{
 		sds: sds,
 		rds: rds,

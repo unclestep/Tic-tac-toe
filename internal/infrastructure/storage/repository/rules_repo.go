@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"tictactoe/internal/domain/model"
 	"tictactoe/internal/infrastructure/storage/mapper"
-	storagePort "tictactoe/internal/infrastructure/storage/port"
+	"tictactoe/internal/infrastructure/storage/ds"
 )
 
 type RulesRepo struct {
-	ds storagePort.RulesDataSource
+	ds ds.RulesDataSource
 }
 
-func NewRulesRepo(ds storagePort.RulesDataSource) *RulesRepo {
+func NewRulesRepo(ds ds.RulesDataSource) *RulesRepo {
 	return &RulesRepo{
 		ds: ds,
 	}

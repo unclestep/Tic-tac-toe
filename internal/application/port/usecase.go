@@ -13,6 +13,7 @@ var (
 	ErrGameAlreadyStarted       = errors.New("game already started")
 	ErrPlayerCantMakeMove       = errors.New("player cant make move")
 	ErrGameNotStarted           = errors.New("game not started")
+	ErrInvalidCredentials       = errors.New("invalid credentials")
 )
 
 type BotMover interface {
@@ -21,6 +22,11 @@ type BotMover interface {
 
 type HumanMover interface {
 	MakeMove(session *model.Session, player *model.Player, p geometry.Point) error
+}
+
+type UserService interface {
+	SignUp(UUID, login, password string) (*model.User, error)
+	SignIn(user *model.User, password string) bool
 }
 
 type CreateUseCase interface {
