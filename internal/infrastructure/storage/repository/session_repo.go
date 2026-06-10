@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
 	"tictactoe/internal/infrastructure/storage/ds"
 	"tictactoe/internal/infrastructure/storage/mapper"
@@ -21,25 +22,44 @@ func NewSessionRepo(sds ds.SessionDataSource, rds ds.RulesDataSource) *SessionRe
 	}
 }
 
-func (r *SessionRepo) Get(ctx context.Context, id string) (*model.Session, error) {
-	srecord, err := r.sds.Fetch(ctx, id)
+func (r *SessionRepo) Get(ctx context.Context, opts ...port.GetOpt) ([]*model.Session, error) {
+	cfg := &port.GetConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	var dsOpts []ds.FetchOption
+	if cfg.State != nil {
+		dsOpts = append(dsOpts, ds.WithState(*cfg.State))
+	}
+	if cfg.UUID != nil {
+		dsOpts = append(dsOpts, ds.WithUUID(*cfg.UUID))
+	}
+
+	dsrecords, err := r.sds.Fetch(ctx, dsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("get session: %w", err)
 	}
 
-	dsession, err := mapper.ToSessionDomain(srecord)
-	if err != nil {
-		return nil, fmt.Errorf("get session: %w", err)
+	var dsessions []*model.Session
+
+	for _, srecord := range dsrecords {
+		dsession, err := mapper.ToSessionDomain(srecord)
+		if err != nil {
+			return nil, fmt.Errorf("get session: %w", err)
+		}
+
+		rrecord, err := r.rds.Fetch(ctx, srecord.RulesUUID)
+		if err != nil {
+			return nil, fmt.Errorf("get session: %w", err)
+		}
+		drules := mapper.ToRulesDomain(rrecord)
+		dsession.Rules = drules
+
+		dsessions = append(dsessions, dsession)
 	}
 
-	rrecord, err := r.rds.Fetch(ctx, srecord.RulesUUID)
-	if err != nil {
-		return nil, fmt.Errorf("get session: %w", err)
-	}
-	drules := mapper.ToRulesDomain(rrecord)
-	dsession.Rules = drules
-
-	return dsession, nil
+	return dsessions, nil
 }
 
 func (r *SessionRepo) Save(ctx context.Context, session *model.Session) error {

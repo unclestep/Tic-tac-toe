@@ -25,10 +25,11 @@ func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*mode
 	wrap := func(err error) error {
 		return fmt.Errorf("connect (session %s): %w", cmd.SessionUUID, err)
 	}
-	session, err := uc.sessionRepo.Get(ctx, cmd.SessionUUID)
-	if err != nil {
+	sessions, err := uc.sessionRepo.Get(ctx, port.WithUUID(cmd.SessionUUID))
+	if err != nil || len(sessions) != 1 {
 		return nil, wrap(err)
 	}
+	session := sessions[0]
 
 	am := session.GetAvailableMarks()
 	if len(am) == 0 {

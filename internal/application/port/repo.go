@@ -7,8 +7,27 @@ import (
 	"tictactoe/internal/domain/model"
 )
 
+type GetConfig struct {
+	State *model.State
+	UUID  *string
+}
+
+type GetOpt func(*GetConfig)
+
+func WithState(s model.State) GetOpt {
+	return func(cfg *GetConfig) {
+		cfg.State = &s
+	}
+}
+
+func WithUUID(UUID string) GetOpt {
+	return func(cfg *GetConfig) {
+		cfg.UUID = &UUID
+	}
+}
+
 type SessionRepo interface {
-	Get(ctx context.Context, sessionUUID string) (*model.Session, error)
+	Get(ctx context.Context, opts ...GetOpt) ([]*model.Session, error)
 	Save(ctx context.Context, session *model.Session) error
 }
 

@@ -25,10 +25,11 @@ func (uc *Disconnect) Execute(ctx context.Context, cmd *port.DisconnectCommand) 
 		return fmt.Errorf("disconnect (session %s, player %s): %w", cmd.SessionUUID, cmd.PlayerUUID, err)
 	}
 
-	session, err := uc.sessionRepo.Get(ctx, cmd.SessionUUID)
-	if err != nil {
+	sessions, err := uc.sessionRepo.Get(ctx, port.WithUUID(cmd.SessionUUID))
+	if err != nil || len(sessions) != 1 {
 		return nil, wrap(err)
 	}
+	session := sessions[0]
 
 	turnPlayer, err := session.GetTurnPlayer()
 	if err != nil {

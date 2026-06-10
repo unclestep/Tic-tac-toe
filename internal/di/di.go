@@ -30,6 +30,7 @@ var TicTacToe = fx.Module(
 	repo,
 	dataSource,
 	delivery,
+	mid,
 	fx.Invoke(registerServer),
 )
 
@@ -141,54 +142,24 @@ var dataSource = fx.Module(
 )
 
 var delivery = fx.Module(
-	"HTTP",
-	fx.Provide(fx.Annotate(
-		handler.NewConnectHandler,
-		fx.As(new(http.Handler)),
-		fx.ResultTags(`name:"connect_h"`),
-	)),
-	fx.Provide(fx.Annotate(
-		handler.NewCreateHandler,
-		fx.As(new(http.Handler)),
-		fx.ResultTags(`name:"create_h"`),
-	)),
-	fx.Provide(fx.Annotate(
-		handler.NewStartHandler,
-		fx.As(new(http.Handler)),
-		fx.ResultTags(`name:"start_h"`),
-	)),
-	fx.Provide(fx.Annotate(
-		handler.NewMakeMoveHandler,
-		fx.As(new(http.Handler)),
-		fx.ResultTags(`name:"makemove_h"`),
-	)),
-	fx.Provide(fx.Annotate(
-		handler.NewDisconnectHandler,
-		fx.As(new(http.Handler)),
-		fx.ResultTags(`name:"disconnect_h"`),
-	)),
-	fx.Provide(fx.Annotate(
-		handler.NewSignUpHandler,
-		fx.As(new(http.Handler)),
-		fx.ResultTags(`name:"signup_h"`),
-	)),
-	fx.Provide(fx.Annotate(
-		handler.NewSignInHandler,
-		fx.As(new(http.Handler)),
-		fx.ResultTags(`name:"signin_h"`),
-	)),
-	fx.Provide(middleware.NewUserAuthenticator),
-	fx.Provide(fx.Annotate(
-		httpDelivery.NewRouter,
-		fx.ParamTags(
-			`name:"create_h"`,
-			`name:"connect_h"`,
-			`name:"start_h"`,
-			`name:"makemove_h"`,
-			`name:"disconnect_h"`,
-			`name:"signup_h"`,
-			`name:"signin_h"`,
-		),
-	)),
+	"handlers",
+	fx.Provide(
+		fx.Annotate(handler.NewCreateHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"create_h"`)),
+		fx.Annotate(handler.NewConnectHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"connect_h"`)),
+		fx.Annotate(handler.NewStartHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"start_h"`)),
+		fx.Annotate(handler.NewMakeMoveHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"move_h"`)),
+		fx.Annotate(handler.NewDisconnectHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"disconnect_h"`)),
+		fx.Annotate(handler.NewSignUpHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"sign_up_h"`)),
+		fx.Annotate(handler.NewSignInHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"sign_in_h"`)),
+		fx.Annotate(handler.NewGetSessionsHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"get_sessions_h"`)),
+		fx.Annotate(handler.NewGetSessionHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"get_session_h"`)),
+		fx.Annotate(handler.NewGetUserHandler, fx.As(new(http.Handler)), fx.ResultTags(`name:"get_user_h"`)),
+	),
+	fx.Provide(httpDelivery.NewRouter),
 	fx.Provide(json.NewErrorMapper),
+)
+
+var mid = fx.Module(
+	"middleware",
+	fx.Provide(middleware.NewUserAuthenticator),
 )

@@ -15,7 +15,7 @@ func ToSessionStorage(s *dmodel.Session) *dsmodel.SessionRecord {
 		Players:   convPlayersToStorage(s.Players),
 		Turn:      s.Turn,
 		Winner:    toPlayerStorage(s.Winner),
-		State:     stateToString(s.State),
+		State:     StateToString(s.State),
 		Seed:      s.Params.Seed,
 	}
 }
@@ -66,7 +66,7 @@ func markToString(mark dmodel.Mark) string {
 	}
 }
 
-func stateToString(state dmodel.State) string {
+func StateToString(state dmodel.State) string {
 	switch state {
 	case dmodel.StateLobby:
 		return "Lobby"

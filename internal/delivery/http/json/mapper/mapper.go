@@ -79,6 +79,18 @@ func stateToString(state model.State) string {
 	}
 }
 
+func StringToState(state string) (model.State, error) {
+	switch state {
+	case "Lobby":
+		return model.StateLobby, nil
+	case "Playing":
+		return model.StatePlaying, nil
+	case "GameOver":
+		return model.StateGameOver, nil
+	}
+	return model.StateUnknown, fmt.Errorf("unknown state")
+}
+
 func markToByte(mark model.Mark) byte {
 	switch mark {
 	case model.MarkEmpty:
