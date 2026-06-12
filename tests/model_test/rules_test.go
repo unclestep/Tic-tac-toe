@@ -17,6 +17,6 @@ func TestRulesClone(t *testing.T) {
 
 	assert.Equal(t, *original, *clone)
 
-	clone.UUID = "b"
-	assert.NotEqual(t, clone.UUID, original.UUID)
+	clone.WinLength = 100
+	assert.NotEqual(t, clone, original)
 }
