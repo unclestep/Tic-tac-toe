@@ -40,8 +40,12 @@ func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*mode
 	}
 
 	rng := rand.New(rand.NewSource(session.Params.Seed))
+	userUUID, ok := ctx.Value(port.UserUUIDKey).(string)
+	if !ok {
+		return nil, wrap(port.ErrInvalidCredentials)
+	}
 
-	player := model.NewPlayer(uuid.NewString(), ctx.Value(port.UserUUIDKey).(string), cmd.PlayerName, am[rng.Intn(len(am))])
+	player := model.NewPlayer(uuid.NewString(), userUUID, cmd.PlayerName, am[rng.Intn(len(am))])
 	err = session.AddPlayer(player)
 	if err != nil {
 		return nil, wrap(err)

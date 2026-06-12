@@ -36,6 +36,10 @@ func (h *GetSession) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
+	if len(sessions) == 0 {
+		j.WriteError(w, "session not found", http.StatusNotFound)
+		return
+	}
 
 	j.WriteJSON(w, mapper.ToSessionResponse(sessions[0]), http.StatusOK)
 }

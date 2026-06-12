@@ -37,19 +37,19 @@ func (r *SessionRepo) Get(ctx context.Context, opts ...port.SessionGetOpt) ([]*m
 		opt.ApplyToSession(cfg)
 	}
 
-	sessionRecords, err := r.sds.Fetch(ctx, SessionDomainOptsToDatasourceOpts(cfg)...)
+	records, err := r.sds.Fetch(ctx, SessionDomainOptsToDatasourceOpts(cfg)...)
 	if err != nil {
 		return nil, fmt.Errorf("get session: %w", err)
 	}
 
-	var sessions []*model.Session
+	sessions := make([]*model.Session, len(records))
 
-	for _, record := range sessionRecords {
+	for i, record := range records {
 		session, err := mapper.ToSessionDomain(record)
 		if err != nil {
 			return nil, fmt.Errorf("get session: %w", err)
 		}
-		sessions = append(sessions, session)
+		sessions[i] = session
 	}
 
 	return sessions, nil

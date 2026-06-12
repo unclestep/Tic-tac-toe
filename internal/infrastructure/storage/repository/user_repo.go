@@ -42,9 +42,9 @@ func (r *UserRepo) Get(ctx context.Context, opts ...port.UserGetOpt) ([]*model.U
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
-	var users []*model.User
-	for _, record := range records {
-		users = append(users, mapper.ToUserDomain(record))
+	users := make([]*model.User, len(records))
+	for i, record := range records {
+		users[i] = mapper.ToUserDomain(record)
 	}
 	return users, nil
 }

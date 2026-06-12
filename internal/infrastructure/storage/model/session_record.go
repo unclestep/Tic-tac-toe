@@ -71,8 +71,9 @@ type PlayerRecord struct {
 
 func (pr *PlayerRecord) Clone() *PlayerRecord {
 	return &PlayerRecord{
-		UUID: pr.UUID,
-		Name: pr.Name,
-		Mark: pr.Mark,
+		UUID:     pr.UUID,
+		UserUUID: pr.UserUUID,
+		Name:     pr.Name,
+		Mark:     pr.Mark,
 	}
 }

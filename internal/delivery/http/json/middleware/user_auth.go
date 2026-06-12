@@ -35,14 +35,14 @@ func (m *UserAuthenticator) WithAuth(next http.Handler) http.Handler {
 				Password: password,
 			},
 		)
-
-		newCtx := context.WithValue(r.Context(), port.UserUUIDKey, user.UUID)
-		reqWithCtx := r.WithContext(newCtx)
-
 		if err != nil {
 			json.WriteError(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
+
+		newCtx := context.WithValue(r.Context(), port.UserUUIDKey, user.UUID)
+		reqWithCtx := r.WithContext(newCtx)
+
 		next.ServeHTTP(w, reqWithCtx)
 	})
 }

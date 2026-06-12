@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"tictactoe/internal/application/port"
 	"tictactoe/internal/infrastructure/storage/ds"
 	dsmodel "tictactoe/internal/infrastructure/storage/model"
 
@@ -33,7 +32,7 @@ func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt)
 	sessionSQL := `
 		SELECT s.uuid,
 			   r.board_width, r.board_height, r.win_length,
-			   p.uuid, p.name, p.mark,
+			   p.uuid, p.user_uuid, p.name, p.mark,
 			   s.board, s.turn, s.winner, s.state, s.seed
 		FROM sessions s
 		LEFT JOIN players p ON p.session_uuid = s.uuid
@@ -68,13 +67,13 @@ func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt)
 	for rows.Next() {
 		var s dsmodel.SessionRecord
 		var r dsmodel.RulesRecord
-		var pUUID, pName, pMark *string
+		var pUUID, pUserUUID, pName, pMark *string
 		var winnerUUID *string
 		var binBoard []byte
 
 		if err := rows.Scan(&s.UUID,
 			&r.BoardWidth, &r.BoardHeight, &r.WinLength,
-			&pUUID, &pName, &pMark,
+			&pUUID, &pUserUUID, &pName, &pMark,
 			&binBoard, &s.Turn, &winnerUUID, &s.State, &s.Seed); err != nil {
 			return nil, fmt.Errorf("fetch: %w", err)
 		}
@@ -85,9 +84,10 @@ func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt)
 
 		if pUUID != nil && pName != nil && pMark != nil {
 			s.Players = append(s.Players, &dsmodel.PlayerRecord{
-				UUID: *pUUID,
-				Name: *pName,
-				Mark: *pMark,
+				UUID:     *pUUID,
+				UserUUID: *pUserUUID,
+				Name:     *pName,
+				Mark:     *pMark,
 			})
 		}
 
@@ -108,10 +108,6 @@ func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt)
 
 	for i, uuid := range order {
 		records[i] = recordMap[uuid]
-	}
-
-	if len(records) == 0 {
-		return nil, fmt.Errorf("fetch: %w", port.ErrSessionNotFound)
 	}
 
 	return records, nil

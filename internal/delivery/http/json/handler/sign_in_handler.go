@@ -48,5 +48,5 @@ func (h *SignInHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	j.WriteJSON(w, mapper.ToUserReposnse(user), http.StatusOK)
+	j.WriteJSON(w, mapper.ToUserResponse(user), http.StatusOK)
 }

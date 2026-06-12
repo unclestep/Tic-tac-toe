@@ -7,7 +7,7 @@ import (
 
 type ContextKey string
 
-const UserUUIDKey string = "UserUUID"
+const UserUUIDKey ContextKey = "UserUUID"
 
 type CreateCommand struct {
 	Rules         *model.Rules

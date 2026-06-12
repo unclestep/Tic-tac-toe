@@ -15,7 +15,6 @@ import (
 	"tictactoe/internal/delivery/http/json/middleware"
 	"tictactoe/internal/domain/service"
 
-	// "tictactoe/internal/infrastructure/storage/memory"
 	"tictactoe/internal/infrastructure/storage/ds"
 	"tictactoe/internal/infrastructure/storage/postgres"
 	"tictactoe/internal/infrastructure/storage/repository"

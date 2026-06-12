@@ -32,10 +32,10 @@ func (h *GetUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	uuid := r.PathValue("uuid")
 
 	users, err := h.userRepo.Get(r.Context(), port.WithUUID(uuid))
-	if err != nil {
+	if err != nil { // if no user found, err == ErrUserNotFound
 		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
 
-	j.WriteJSON(w, mapper.ToUserReposnse(users[0]), http.StatusOK)
+	j.WriteJSON(w, mapper.ToUserResponse(users[0]), http.StatusOK)
 }

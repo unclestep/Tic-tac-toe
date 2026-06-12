@@ -28,7 +28,7 @@ func NewSignUpHandler(uc usecase.SignUpUseCase, em *j.ErrorMapper) *SignUpHandle
 // @Accept       json
 // @Produce      json
 // @Param        request body dto.SignUpRequest true "User credentials"
-// @Success      201     {object} dto.UserResponse
+// @Success      200     {object} dto.UserResponse
 // @Failure      400     {object} dto.ErrorResponse "Invalid request body"
 // @Failure      409     {object} dto.ErrorResponse "Login already taken"
 // @Router       /auth/signup [post]
@@ -48,5 +48,5 @@ func (h *SignUpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	j.WriteJSON(w, mapper.ToUserReposnse(user), http.StatusOK)
+	j.WriteJSON(w, mapper.ToUserResponse(user), http.StatusOK)
 }

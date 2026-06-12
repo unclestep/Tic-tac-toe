@@ -41,7 +41,7 @@ func ToSessionResponse(s *model.Session) dto.SessionResponse {
 	return resp
 }
 
-func ToUserReposnse(user *model.User) dto.UserResponse {
+func ToUserResponse(user *model.User) dto.UserResponse {
 	return dto.UserResponse{
 		UUID: user.UUID,
 	}

@@ -5,6 +5,7 @@ import (
 
 	"tictactoe/internal/application/port"
 	j "tictactoe/internal/delivery/http/json"
+	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/delivery/http/json/mapper"
 )
 
@@ -30,22 +31,27 @@ func NewGetSessionsHandler(sessionRepo port.SessionRepo, em *j.ErrorMapper) *Get
 // @Router      /game [get]
 func (h *GetSessions) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rawState := r.URL.Query().Get("state")
+	var opts []port.SessionGetOpt
 
-	domainState, err := mapper.StringToState(rawState)
-	if err != nil {
-		j.WriteError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var opt port.SessionGetOpt
 	if rawState != "" {
-		opt = port.WithState(domainState)
+		domainState, err := mapper.StringToState(rawState)
+		if err != nil {
+			j.WriteError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		opts = append(opts, port.WithState(domainState))
 	}
-	sessions, err := h.sessionRepo.Get(r.Context(), opt)
+
+	sessions, err := h.sessionRepo.Get(r.Context(), opts...)
 	if err != nil {
 		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
 
-	j.WriteJSON(w, sessions, http.StatusOK)
+	sessionsResponse := make([]dto.SessionResponse, 0)
+	for _, s := range sessions {
+		sessionsResponse = append(sessionsResponse, mapper.ToSessionResponse(s))
+	}
+
+	j.WriteJSON(w, sessionsResponse, http.StatusOK)
 }

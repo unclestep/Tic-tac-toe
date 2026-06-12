@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"tictactoe/internal/application/port"
 	"tictactoe/internal/infrastructure/storage/ds"
 	"tictactoe/internal/infrastructure/storage/model"
 
@@ -57,10 +56,6 @@ func (u *UserDataSource) Fetch(parent context.Context, opts ...ds.UserOpt) ([]*m
 	records, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByPos[model.UserRecord])
 	if err != nil {
 		return nil, fmt.Errorf("fetch: collect rows: %w", err)
-	}
-
-	if len(records) == 0 {
-		return nil, fmt.Errorf("fetch: %w", port.ErrUserNotFound)
 	}
 
 	return records, nil
