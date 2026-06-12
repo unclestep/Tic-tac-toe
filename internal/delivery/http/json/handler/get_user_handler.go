@@ -32,8 +32,12 @@ func (h *GetUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	uuid := r.PathValue("uuid")
 
 	users, err := h.userRepo.Get(r.Context(), port.WithUUID(uuid))
-	if err != nil { // if no user found, err == ErrUserNotFound
+	if err != nil {
 		j.WriteError(w, err.Error(), h.em.Status(err))
+		return
+	}
+	if len(users) == 0 {
+		j.WriteError(w, port.ErrUserNotFound.Error(), h.em.Status(err))
 		return
 	}
 

@@ -48,9 +48,9 @@ func (h *GetSessions) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionsResponse := make([]dto.SessionResponse, 0)
-	for _, s := range sessions {
-		sessionsResponse = append(sessionsResponse, mapper.ToSessionResponse(s))
+	sessionsResponse := make([]dto.SessionResponse, len(sessions))
+	for i, s := range sessions {
+		sessionsResponse[i] = mapper.ToSessionResponse(s)
 	}
 
 	j.WriteJSON(w, sessionsResponse, http.StatusOK)

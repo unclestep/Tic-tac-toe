@@ -67,6 +67,7 @@ func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt)
 	for rows.Next() {
 		var s dsmodel.SessionRecord
 		var r dsmodel.RulesRecord
+		var p *dsmodel.PlayerRecord
 		var pUUID, pUserUUID, pName, pMark *string
 		var winnerUUID *string
 		var binBoard []byte
@@ -83,25 +84,30 @@ func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt)
 		}
 
 		if pUUID != nil && pName != nil && pMark != nil {
-			s.Players = append(s.Players, &dsmodel.PlayerRecord{
+			p = &dsmodel.PlayerRecord{
 				UUID:     *pUUID,
 				UserUUID: *pUserUUID,
 				Name:     *pName,
 				Mark:     *pMark,
-			})
+			}
+
+			if *pUUID == *winnerUUID {
+				s.Winner = p
+			}
 		}
 
 		if prev, ok := recordMap[s.UUID]; ok {
-			prev.Players = append(prev.Players, s.Players...)
+			prev.Players = append(prev.Players, p)
 		} else {
 			s.Rules = &r
+			s.Players = append(s.Players, p)
 			recordMap[s.UUID] = &s
 			order = append(order, s.UUID)
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("fetch: after srows close: %w", err)
+		return nil, fmt.Errorf("fetch: after rows close: %w", err)
 	}
 
 	records := make([]*dsmodel.SessionRecord, len(order))

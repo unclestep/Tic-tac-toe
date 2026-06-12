@@ -37,7 +37,7 @@ func (h *GetSession) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(sessions) == 0 {
-		j.WriteError(w, "session not found", http.StatusNotFound)
+		j.WriteError(w, port.ErrSessionNotFound.Error(), http.StatusNotFound)
 		return
 	}
 
