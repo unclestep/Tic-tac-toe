@@ -8,5 +8,5 @@ import (
 
 type UserDataSource interface {
 	Store(ctx context.Context, user *model.UserRecord) error
-	Fetch(ctx context.Context, login string) (*model.UserRecord, error)
+	Fetch(ctx context.Context, opts ...UserOpt) ([]*model.UserRecord, error)
 }

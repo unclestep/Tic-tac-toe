@@ -109,10 +109,6 @@ var app = fx.Module(
 var repo = fx.Module(
 	"Repository",
 	fx.Provide(fx.Annotate(
-		repository.NewRulesRepo,
-		fx.As(new(port.RulesRepo)),
-	)),
-	fx.Provide(fx.Annotate(
 		repository.NewSessionRepo,
 		fx.As(new(port.SessionRepo)),
 	)),
@@ -127,10 +123,6 @@ var dataSource = fx.Module(
 	fx.Provide(func() (postgres.DBTX, error) {
 		return postgres.NewPool(context.Background(), os.Getenv("POSTGRES_DSN"))
 	}),
-	fx.Provide(fx.Annotate(
-		postgres.NewRulesDataSource,
-		fx.As(new(ds.RulesDataSource)),
-	)),
 	fx.Provide(fx.Annotate(
 		postgres.NewSessionDataSource,
 		fx.As(new(ds.SessionDataSource)),

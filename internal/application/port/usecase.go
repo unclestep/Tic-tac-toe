@@ -14,6 +14,7 @@ var (
 	ErrPlayerCantMakeMove       = errors.New("player cant make move")
 	ErrGameNotStarted           = errors.New("game not started")
 	ErrInvalidCredentials       = errors.New("invalid credentials")
+	ErrInvalidBoardSize         = errors.New("invalid board size")
 )
 
 type BotMover interface {

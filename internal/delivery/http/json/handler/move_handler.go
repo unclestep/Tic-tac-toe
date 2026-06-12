@@ -5,17 +5,17 @@ import (
 	"net/http"
 
 	"tictactoe/internal/application/port"
-	jsonDelivery "tictactoe/internal/delivery/http/json"
+	j "tictactoe/internal/delivery/http/json"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/delivery/http/json/mapper"
 )
 
 type MakeMoveHandler struct {
 	uc port.MakeMoveUseCase
-	em *jsonDelivery.ErrorMapper
+	em *j.ErrorMapper
 }
 
-func NewMakeMoveHandler(uc port.MakeMoveUseCase, em *jsonDelivery.ErrorMapper) *MakeMoveHandler {
+func NewMakeMoveHandler(uc port.MakeMoveUseCase, em *j.ErrorMapper) *MakeMoveHandler {
 	return &MakeMoveHandler{
 		uc: uc,
 		em: em,
@@ -35,7 +35,7 @@ func (h *MakeMoveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req dto.MakeMoveRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonDelivery.WriteError(w, "invalid request body", http.StatusBadRequest)
+		j.WriteError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -43,9 +43,9 @@ func (h *MakeMoveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.uc.Execute(r.Context(), cmd)
 	if err != nil {
-		jsonDelivery.WriteError(w, err.Error(), h.em.Status(err))
+		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
 
-	jsonDelivery.WriteJSON(w, mapper.ToSessionResponse(session), http.StatusOK)
+	j.WriteJSON(w, mapper.ToSessionResponse(session), http.StatusOK)
 }

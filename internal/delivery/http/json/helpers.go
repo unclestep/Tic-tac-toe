@@ -23,7 +23,6 @@ func NewErrorMapper() *ErrorMapper {
 	return &ErrorMapper{
 		entries: []errorEntry{
 			{port.ErrSessionNotFound, http.StatusNotFound},
-			{port.ErrRulesNotFound, http.StatusNotFound},
 			{model.ErrPlayerNotFound, http.StatusNotFound},
 			{model.ErrSessionFull, http.StatusBadRequest},
 			{model.ErrPlayerExists, http.StatusBadRequest},

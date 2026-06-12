@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"tictactoe/internal/application/port"
 	j "tictactoe/internal/delivery/http/json"
-	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/delivery/http/json/mapper"
 )
 
@@ -39,24 +37,15 @@ func (h *GetSessions) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessions, err := h.sessionRepo.Get(r.Context(), port.WithState(domainState))
+	var opt port.SessionGetOpt
+	if rawState != "" {
+		opt = port.WithState(domainState)
+	}
+	sessions, err := h.sessionRepo.Get(r.Context(), opt)
 	if err != nil {
 		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
 
-	responses := make([]dto.SessionResponse, 0, len(sessions))
-	for _, s := range sessions {
-		responses = append(responses, mapper.ToSessionResponse(s))
-	}
-
-	body, err := json.Marshal(responses)
-	if err != nil {
-		j.WriteError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(body)
+	j.WriteJSON(w, sessions, http.StatusOK)
 }

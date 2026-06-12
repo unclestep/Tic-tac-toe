@@ -5,11 +5,3 @@ type UserRecord struct {
 	Login    string
 	Password string
 }
-
-func (ur *UserRecord) Clone() *UserRecord {
-	return &UserRecord{
-		UUID:     ur.UUID,
-		Login:    ur.Login,
-		Password: ur.Password,
-	}
-}

@@ -2,11 +2,11 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"tictactoe/internal/application/port"
+	"tictactoe/internal/infrastructure/storage/ds"
 	"tictactoe/internal/infrastructure/storage/model"
 
 	"github.com/jackc/pgx/v5"
@@ -22,29 +22,51 @@ func NewUserDataSource(dbtx DBTX) *UserDataSource {
 	}
 }
 
-func (ds *UserDataSource) Fetch(parent context.Context, login string) (*model.UserRecord, error) {
+func (u *UserDataSource) Fetch(parent context.Context, opts ...ds.UserOpt) ([]*model.UserRecord, error) {
 	sql := `
 		SELECT uuid, login, password
 		FROM users
-		WHERE login = $1
+		WHERE 1=1
 	`
 
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	var userRecord model.UserRecord
-	err := ds.dbtx.QueryRow(ctx, sql, login).Scan(&userRecord.UUID, &userRecord.Login, &userRecord.Password)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("fetch: %w", port.ErrUserNotFound)
-		}
-		return nil, fmt.Errorf("fetch: query row: %w", err)
+	cfg := &ds.UserConfig{}
+	for _, opt := range opts {
+		opt.ApplyToUser(cfg)
 	}
 
-	return &userRecord, nil
+	var args []any
+
+	if cfg.UUIDs != nil {
+		args = append(args, cfg.UUIDs)
+		sql += fmt.Sprintf(" AND uuid = ANY($%d)", len(args))
+	}
+
+	if cfg.Logins != nil {
+		args = append(args, cfg.Logins)
+		sql += fmt.Sprintf(" AND login = ANY($%d)", len(args))
+	}
+
+	rows, err := u.dbtx.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("fetch users: %w", err)
+	}
+
+	records, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByPos[model.UserRecord])
+	if err != nil {
+		return nil, fmt.Errorf("fetch: collect rows: %w", err)
+	}
+
+	if len(records) == 0 {
+		return nil, fmt.Errorf("fetch: %w", port.ErrUserNotFound)
+	}
+
+	return records, nil
 }
 
-func (ds *UserDataSource) Store(parent context.Context, user *model.UserRecord) error {
+func (u *UserDataSource) Store(parent context.Context, user *model.UserRecord) error {
 	sql := `
 		INSERT INTO users (uuid, login, password)
 		VALUES ($1, $2, $3)
@@ -56,7 +78,7 @@ func (ds *UserDataSource) Store(parent context.Context, user *model.UserRecord) 
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	_, err := ds.dbtx.Exec(ctx, sql, user.UUID, user.Login, user.Password)
+	_, err := u.dbtx.Exec(ctx, sql, user.UUID, user.Login, user.Password)
 	if err != nil {
 		return fmt.Errorf("store: user insert: %w", err)
 	}

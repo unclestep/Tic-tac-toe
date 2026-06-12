@@ -3,31 +3,48 @@ package model
 import "slices"
 
 type SessionRecord struct {
-	UUID      string
-	RulesUUID string
-	Board     *BoardRecord
-	Players   []*PlayerRecord
-	Turn      int
-	Winner    *PlayerRecord
-	State     string
-	Seed      int64
+	UUID    string
+	Rules   *RulesRecord
+	Board   *BoardRecord
+	Players []*PlayerRecord
+	Turn    int
+	Winner  *PlayerRecord
+	State   string
+	Seed    int64
 }
 
-func (sr *SessionRecord) Clone() *SessionRecord {
+func (r *SessionRecord) Clone() *SessionRecord {
 	var players []*PlayerRecord
-	for _, p := range sr.Players {
+	for _, p := range r.Players {
 		players = append(players, p.Clone())
 	}
 
 	return &SessionRecord{
-		UUID:      sr.UUID,
-		RulesUUID: sr.RulesUUID,
-		Board:     sr.Board.Clone(),
-		Players:   players,
-		Turn:      sr.Turn,
-		Winner:    sr.Winner,
-		State:     sr.State,
-		Seed:      sr.Seed,
+		UUID:    r.UUID,
+		Rules:   r.Rules.Clone(),
+		Board:   r.Board.Clone(),
+		Players: players,
+		Turn:    r.Turn,
+		Winner:  r.Winner.Clone(),
+		State:   r.State,
+		Seed:    r.Seed,
+	}
+}
+
+type RulesRecord struct {
+	BoardWidth  int
+	BoardHeight int
+	WinLength   int
+}
+
+func (r *RulesRecord) Clone() *RulesRecord {
+	if r == nil {
+		return nil
+	}
+	return &RulesRecord{
+		BoardWidth:  r.BoardWidth,
+		BoardHeight: r.BoardHeight,
+		WinLength:   r.WinLength,
 	}
 }
 
@@ -46,10 +63,10 @@ func (br *BoardRecord) Clone() *BoardRecord {
 }
 
 type PlayerRecord struct {
-	UUID string
-	Name string
-	Mark string
-	Bot  bool
+	UUID     string
+	UserUUID string
+	Name     string
+	Mark     string
 }
 
 func (pr *PlayerRecord) Clone() *PlayerRecord {
@@ -57,6 +74,5 @@ func (pr *PlayerRecord) Clone() *PlayerRecord {
 		UUID: pr.UUID,
 		Name: pr.Name,
 		Mark: pr.Mark,
-		Bot:  pr.Bot,
 	}
 }

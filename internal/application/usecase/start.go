@@ -27,8 +27,11 @@ func (uc *Start) Execute(ctx context.Context, cmd *port.StartCommand) (*model.Se
 	}
 
 	sessions, err := uc.sessionRepo.Get(ctx, port.WithUUID(cmd.SessionUUID))
-	if err != nil || len(sessions) != 1 {
+	if err != nil {
 		return nil, wrap(err)
+	}
+	if len(sessions) != 1 {
+		return nil, wrap(port.ErrReturnedNotOne)
 	}
 	session := sessions[0]
 

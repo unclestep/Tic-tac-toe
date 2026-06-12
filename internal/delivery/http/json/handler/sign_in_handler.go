@@ -5,17 +5,17 @@ import (
 	"net/http"
 
 	"tictactoe/internal/application/usecase"
-	jsonDelivery "tictactoe/internal/delivery/http/json"
+	j "tictactoe/internal/delivery/http/json"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/delivery/http/json/mapper"
 )
 
 type SignInHandler struct {
 	uc usecase.SignInUseCase
-	em *jsonDelivery.ErrorMapper
+	em *j.ErrorMapper
 }
 
-func NewSignInHandler(uc usecase.SignInUseCase, em *jsonDelivery.ErrorMapper) *SignInHandler {
+func NewSignInHandler(uc usecase.SignInUseCase, em *j.ErrorMapper) *SignInHandler {
 	return &SignInHandler{
 		uc: uc,
 		em: em,
@@ -36,7 +36,7 @@ func (h *SignInHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req dto.SignInRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonDelivery.WriteError(w, "invalud request body", http.StatusBadRequest)
+		j.WriteError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -44,9 +44,9 @@ func (h *SignInHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.uc.Execute(r.Context(), cmd)
 	if err != nil {
-		jsonDelivery.WriteError(w, err.Error(), h.em.Status(err))
+		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
 
-	jsonDelivery.WriteJSON(w, mapper.ToUserReposnse(user), http.StatusOK)
+	j.WriteJSON(w, mapper.ToUserReposnse(user), http.StatusOK)
 }

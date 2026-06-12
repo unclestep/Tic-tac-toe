@@ -9,14 +9,22 @@ import (
 
 func ToSessionStorage(s *dmodel.Session) *dsmodel.SessionRecord {
 	return &dsmodel.SessionRecord{
-		UUID:      s.UUID,
-		RulesUUID: s.Rules.UUID,
-		Board:     toBoardStorage(s.Board),
-		Players:   convPlayersToStorage(s.Players),
-		Turn:      s.Turn,
-		Winner:    toPlayerStorage(s.Winner),
-		State:     StateToString(s.State),
-		Seed:      s.Params.Seed,
+		UUID:    s.UUID,
+		Rules:   toRulesStorage(s.Rules),
+		Board:   toBoardStorage(s.Board),
+		Players: convPlayersToStorage(s.Players),
+		Turn:    s.Turn,
+		Winner:  toPlayerStorage(s.Winner),
+		State:   StateToString(s.State),
+		Seed:    s.Params.Seed,
+	}
+}
+
+func toRulesStorage(r *dmodel.Rules) *dsmodel.RulesRecord {
+	return &dsmodel.RulesRecord{
+		BoardWidth:  r.BoardWidth,
+		BoardHeight: r.BoardHeight,
+		WinLength:   r.WinLength,
 	}
 }
 
@@ -27,7 +35,7 @@ func toBoardStorage(b *dmodel.Board) *dsmodel.BoardRecord {
 		Cells:  make([]int8, b.Width*b.Height),
 	}
 
-	for i, cell := range b.CloneCells() {
+	for i, cell := range b.Cells {
 		r.Cells[i] = int8(cell)
 	}
 
@@ -47,9 +55,10 @@ func toPlayerStorage(p *dmodel.Player) *dsmodel.PlayerRecord {
 		return nil
 	}
 	return &dsmodel.PlayerRecord{
-		UUID: p.UUID,
-		Name: p.Name,
-		Mark: markToString(p.Mark),
+		UUID:     p.UUID,
+		UserUUID: p.UserUUID,
+		Name:     p.Name,
+		Mark:     markToString(p.Mark),
 	}
 }
 
@@ -94,6 +103,7 @@ func ToSessionDomain(r *dsmodel.SessionRecord) (*dmodel.Session, error) {
 
 	return &dmodel.Session{
 		UUID:    r.UUID,
+		Rules:   toRulesDomain(r.Rules),
 		Board:   toBoardDomain(r.Board),
 		Players: players,
 		Turn:    r.Turn,
@@ -101,6 +111,14 @@ func ToSessionDomain(r *dsmodel.SessionRecord) (*dmodel.Session, error) {
 		State:   state,
 		Params:  &dmodel.SessionParams{Seed: r.Seed},
 	}, nil
+}
+
+func toRulesDomain(r *dsmodel.RulesRecord) *dmodel.Rules {
+	return &dmodel.Rules{
+		BoardWidth:  r.BoardWidth,
+		BoardHeight: r.BoardHeight,
+		WinLength:   r.WinLength,
+	}
 }
 
 func toBoardDomain(r *dsmodel.BoardRecord) *dmodel.Board {
@@ -134,9 +152,10 @@ func toPlayerDomain(r *dsmodel.PlayerRecord) (*dmodel.Player, error) {
 	}
 
 	return &dmodel.Player{
-		UUID: r.UUID,
-		Name: r.Name,
-		Mark: mark,
+		UUID:     r.UUID,
+		UserUUID: r.UserUUID,
+		Name:     r.Name,
+		Mark:     mark,
 	}, nil
 }
 

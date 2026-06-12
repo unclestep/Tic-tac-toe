@@ -1,7 +1,10 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
+
+	"tictactoe/internal/application/port"
 
 	"tictactoe/internal/application/usecase"
 	"tictactoe/internal/delivery/http/json"
@@ -25,17 +28,21 @@ func (m *UserAuthenticator) WithAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		_, err := m.signIn.Execute(
+		user, err := m.signIn.Execute(
 			r.Context(),
 			&usecase.SignInCommand{
 				Login:    login,
 				Password: password,
 			},
 		)
+
+		newCtx := context.WithValue(r.Context(), port.UserUUIDKey, user.UUID)
+		reqWithCtx := r.WithContext(newCtx)
+
 		if err != nil {
 			json.WriteError(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, reqWithCtx)
 	})
 }

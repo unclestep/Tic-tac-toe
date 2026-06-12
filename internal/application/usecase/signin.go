@@ -34,10 +34,14 @@ func (uc *SignIn) Execute(ctx context.Context, cmd *SignInCommand) (*model.User,
 		return fmt.Errorf("sign in: %w", err)
 	}
 
-	user, err := uc.userRepo.Get(ctx, cmd.Login)
+	users, err := uc.userRepo.Get(ctx, port.WithLogin(cmd.Login))
 	if err != nil {
 		return nil, wrap(err)
 	}
+	if len(users) != 1 {
+		return nil, wrap(port.ErrReturnedNotOne)
+	}
+	user := users[0]
 
 	ok := uc.userService.SignIn(user, cmd.Password)
 	if !ok {

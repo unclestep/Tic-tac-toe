@@ -1,0 +1,3 @@
+DELETE FROM players;
+ALTER TABLE players
+   ADD COLUMN user_uuid TEXT NOT NULL REFERENCES users(uuid) ON DELETE CASCADE;

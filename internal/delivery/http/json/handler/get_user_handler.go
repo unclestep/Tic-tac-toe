@@ -4,16 +4,16 @@ import (
 	"net/http"
 
 	"tictactoe/internal/application/port"
-	"tictactoe/internal/delivery/http/json"
+	j "tictactoe/internal/delivery/http/json"
 	"tictactoe/internal/delivery/http/json/mapper"
 )
 
 type GetUser struct {
 	userRepo port.UserRepo
-	em       *json.ErrorMapper
+	em       *j.ErrorMapper
 }
 
-func NewGetUserHandler(userRepo port.UserRepo, em *json.ErrorMapper) *GetUser {
+func NewGetUserHandler(userRepo port.UserRepo, em *j.ErrorMapper) *GetUser {
 	return &GetUser{
 		userRepo: userRepo,
 		em:       em,
@@ -31,11 +31,11 @@ func NewGetUserHandler(userRepo port.UserRepo, em *json.ErrorMapper) *GetUser {
 func (h *GetUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	uuid := r.PathValue("uuid")
 
-	user, err := h.userRepo.Get(r.Context(), uuid)
+	users, err := h.userRepo.Get(r.Context(), port.WithUUID(uuid))
 	if err != nil {
-		json.WriteError(w, err.Error(), h.em.Status(err))
+		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
 
-	json.WriteJSON(w, mapper.ToUserReposnse(user), http.StatusOK)
+	j.WriteJSON(w, mapper.ToUserReposnse(users[0]), http.StatusOK)
 }

@@ -26,8 +26,11 @@ func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*mode
 		return fmt.Errorf("connect (session %s): %w", cmd.SessionUUID, err)
 	}
 	sessions, err := uc.sessionRepo.Get(ctx, port.WithUUID(cmd.SessionUUID))
-	if err != nil || len(sessions) != 1 {
+	if err != nil {
 		return nil, wrap(err)
+	}
+	if len(sessions) != 1 {
+		return nil, wrap(port.ErrReturnedNotOne)
 	}
 	session := sessions[0]
 
@@ -38,7 +41,7 @@ func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*mode
 
 	rng := rand.New(rand.NewSource(session.Params.Seed))
 
-	player := model.NewPlayer(uuid.NewString(), cmd.PlayerName, am[rng.Intn(len(am))])
+	player := model.NewPlayer(uuid.NewString(), ctx.Value(port.UserUUIDKey).(string), cmd.PlayerName, am[rng.Intn(len(am))])
 	err = session.AddPlayer(player)
 	if err != nil {
 		return nil, wrap(err)

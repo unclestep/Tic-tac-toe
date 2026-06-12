@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
 	"tictactoe/internal/infrastructure/storage/ds"
 	"tictactoe/internal/infrastructure/storage/mapper"
@@ -19,12 +20,33 @@ func NewUserRepo(uds ds.UserDataSource) *UserRepo {
 	}
 }
 
-func (r *UserRepo) Get(ctx context.Context, login string) (*model.User, error) {
-	record, err := r.uds.Fetch(ctx, login)
+func UserDomainOptsToDatasourceOpts(c *port.UserGetConfig) []ds.UserOpt {
+	var opts []ds.UserOpt
+	if c.UUIDs != nil {
+		opts = append(opts, ds.WithUUID(c.UUIDs...))
+	}
+	if c.Logins != nil {
+		opts = append(opts, ds.WithLogin(c.Logins...))
+	}
+	return opts
+}
+
+func (r *UserRepo) Get(ctx context.Context, opts ...port.UserGetOpt) ([]*model.User, error) {
+	cfg := &port.UserGetConfig{}
+	for _, opt := range opts {
+		opt.ApplyToUser(cfg)
+	}
+
+	records, err := r.uds.Fetch(ctx, UserDomainOptsToDatasourceOpts(cfg)...)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
-	return mapper.ToUserDomain(record), nil
+
+	var users []*model.User
+	for _, record := range records {
+		users = append(users, mapper.ToUserDomain(record))
+	}
+	return users, nil
 }
 
 func (r *UserRepo) Save(ctx context.Context, user *model.User) error {

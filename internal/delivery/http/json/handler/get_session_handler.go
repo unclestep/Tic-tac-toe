@@ -4,16 +4,16 @@ import (
 	"net/http"
 
 	"tictactoe/internal/application/port"
-	"tictactoe/internal/delivery/http/json"
+	j "tictactoe/internal/delivery/http/json"
 	"tictactoe/internal/delivery/http/json/mapper"
 )
 
 type GetSession struct {
 	sessionRepo port.SessionRepo
-	em          *json.ErrorMapper
+	em          *j.ErrorMapper
 }
 
-func NewGetSessionHandler(sessionRepo port.SessionRepo, em *json.ErrorMapper) *GetSession {
+func NewGetSessionHandler(sessionRepo port.SessionRepo, em *j.ErrorMapper) *GetSession {
 	return &GetSession{
 		sessionRepo: sessionRepo,
 		em:          em,
@@ -32,11 +32,10 @@ func (h *GetSession) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	UUID := r.PathValue("uuid")
 
 	sessions, err := h.sessionRepo.Get(r.Context(), port.WithUUID(UUID))
-	if err != nil || len(sessions) != 1 {
-		json.WriteError(w, err.Error(), h.em.Status(err))
+	if err != nil {
+		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
-	session := sessions[0]
 
-	json.WriteJSON(w, mapper.ToSessionResponse(session), http.StatusOK)
+	j.WriteJSON(w, mapper.ToSessionResponse(sessions[0]), http.StatusOK)
 }

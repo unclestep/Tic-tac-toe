@@ -12,54 +12,47 @@ import (
 
 type SessionRepo struct {
 	sds ds.SessionDataSource
-	rds ds.RulesDataSource
 }
 
-func NewSessionRepo(sds ds.SessionDataSource, rds ds.RulesDataSource) *SessionRepo {
+func NewSessionRepo(sds ds.SessionDataSource) *SessionRepo {
 	return &SessionRepo{
 		sds: sds,
-		rds: rds,
 	}
 }
 
-func (r *SessionRepo) Get(ctx context.Context, opts ...port.GetOpt) ([]*model.Session, error) {
-	cfg := &port.GetConfig{}
+func SessionDomainOptsToDatasourceOpts(c *port.SessionGetConfig) []ds.SessionOpt {
+	var opts []ds.SessionOpt
+	if c.UUIDs != nil {
+		opts = append(opts, ds.WithUUID(c.UUIDs...))
+	}
+	if c.State != nil {
+		opts = append(opts, ds.WithState(*c.State))
+	}
+	return opts
+}
+
+func (r *SessionRepo) Get(ctx context.Context, opts ...port.SessionGetOpt) ([]*model.Session, error) {
+	cfg := &port.SessionGetConfig{}
 	for _, opt := range opts {
-		opt(cfg)
+		opt.ApplyToSession(cfg)
 	}
 
-	var dsOpts []ds.FetchOption
-	if cfg.State != nil {
-		dsOpts = append(dsOpts, ds.WithState(*cfg.State))
-	}
-	if cfg.UUID != nil {
-		dsOpts = append(dsOpts, ds.WithUUID(*cfg.UUID))
-	}
-
-	dsrecords, err := r.sds.Fetch(ctx, dsOpts...)
+	sessionRecords, err := r.sds.Fetch(ctx, SessionDomainOptsToDatasourceOpts(cfg)...)
 	if err != nil {
 		return nil, fmt.Errorf("get session: %w", err)
 	}
 
-	var dsessions []*model.Session
+	var sessions []*model.Session
 
-	for _, srecord := range dsrecords {
-		dsession, err := mapper.ToSessionDomain(srecord)
+	for _, record := range sessionRecords {
+		session, err := mapper.ToSessionDomain(record)
 		if err != nil {
 			return nil, fmt.Errorf("get session: %w", err)
 		}
-
-		rrecord, err := r.rds.Fetch(ctx, srecord.RulesUUID)
-		if err != nil {
-			return nil, fmt.Errorf("get session: %w", err)
-		}
-		drules := mapper.ToRulesDomain(rrecord)
-		dsession.Rules = drules
-
-		dsessions = append(dsessions, dsession)
+		sessions = append(sessions, session)
 	}
 
-	return dsessions, nil
+	return sessions, nil
 }
 
 func (r *SessionRepo) Save(ctx context.Context, session *model.Session) error {

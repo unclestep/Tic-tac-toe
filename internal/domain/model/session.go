@@ -25,6 +25,19 @@ const (
 	StateUnknown
 )
 
+func (s State) String() string {
+	switch s {
+	case StateLobby:
+		return "Lobby"
+	case StatePlaying:
+		return "Playing"
+	case StateGameOver:
+		return "GameOver"
+	default:
+		return "Unknown"
+	}
+}
+
 type SessionParams struct {
 	Seed int64
 }
