@@ -2,11 +2,10 @@ package postgres_test
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 
-	appPort "tictactoe/internal/application/port"
+	"tictactoe/internal/domain/model"
+	"tictactoe/internal/infrastructure/storage/ds"
 	dsmodel "tictactoe/internal/infrastructure/storage/model"
 	pg "tictactoe/internal/infrastructure/storage/postgres"
 )
@@ -24,283 +23,187 @@ func (s *PostgresSuite) savepoint(name string, fn func()) {
 func (s *PostgresSuite) prepareSessions() {
 	sessions := []*dsmodel.SessionRecord{
 		{
-			UUID:      "A",
-			RulesUUID: "A",
+			UUID: "A",
+			Rules: &dsmodel.RulesRecord{
+				BoardWidth: 3, BoardHeight: 3, WinLength: 3,
+			},
 			Board: &dsmodel.BoardRecord{
 				Width:  3,
 				Height: 3,
 				Cells:  []int8{1, 0, 0, 0, 0, 0, 0, 0, 1},
 			},
 			Players: []*dsmodel.PlayerRecord{
-				{UUID: "A", Name: "A", Mark: "X"},
-				{UUID: "B", Name: "B", Mark: "O"},
+				{UUID: "A", UserUUID: "BOT", Name: "A", Mark: "X"},
+				{UUID: "B", UserUUID: "BOT", Name: "B", Mark: "O"},
 			},
 			Turn:  0,
 			State: "Lobby",
 			Seed:  int64(0),
 		},
 		{
-			UUID:      "B",
-			RulesUUID: "B",
+			UUID: "B",
+			Rules: &dsmodel.RulesRecord{
+				BoardWidth: 2, BoardHeight: 2, WinLength: 2,
+			},
 			Board: &dsmodel.BoardRecord{
 				Width:  2,
 				Height: 2,
 				Cells:  []int8{0, 0, 0, 0},
 			},
 			Players: []*dsmodel.PlayerRecord{
-				{UUID: "Z", Name: "Z", Mark: "X"},
+				{UUID: "Z", UserUUID: "BOT", Name: "Z", Mark: "X"},
 			},
-			Turn: 0,
-			Winner: &dsmodel.PlayerRecord{
-				UUID: "A", Name: "A", Mark: "X",
-			},
-			State: "",
+			Turn:  0,
+			State: "Playing",
 			Seed:  int64(0),
 		},
 	}
 
-	ds := pg.NewSessionDataSource(s.tx)
+	pds := pg.NewSessionDataSource(s.tx)
 	for _, session := range sessions {
-		err := ds.Store(context.Background(), session)
+		err := pds.Store(context.Background(), session)
 		s.Require().NoError(err)
 	}
-}
-
-func (s *PostgresSuite) getAllSessions() []*dsmodel.SessionRecord {
-	sql := `
-		SELECT uuid, rules_uuid, board, turn, winner, state, seed
-		FROM sessions
-	`
-
-	rows, err := s.tx.Query(context.Background(), sql)
-	s.Require().NoError(err)
-	defer rows.Close()
-
-	var ss []*dsmodel.SessionRecord
-
-	for rows.Next() {
-		var session dsmodel.SessionRecord
-		var winnerUUID string
-		var binBoard []byte
-		err := rows.Scan(
-			&session.UUID, &session.RulesUUID,
-			&binBoard, &session.Turn, &winnerUUID,
-			&session.State, &session.Seed,
-		)
-		s.Require().NoError(err)
-
-		err = json.Unmarshal(binBoard, &session.Board)
-		s.Require().NoError(err)
-
-		players := s.getPlayersBySession(session.UUID)
-		for _, p := range players {
-			if p.UUID == winnerUUID {
-				session.Winner = p
-				break
-			}
-		}
-		session.Players = players
-
-		ss = append(ss, &session)
-	}
-
-	if err := rows.Err(); err != nil {
-		s.Require().NoError(err)
-	}
-
-	return ss
-}
-
-func (s *PostgresSuite) getAllPlayers() []*dsmodel.PlayerRecord {
-	sql := `
-		SELECT uuid, session_uuid, name, mark
-		FROM players
-	`
-
-	rows, err := s.tx.Query(context.Background(), sql)
-	s.Require().NoError(err)
-	defer rows.Close()
-
-	var players []*dsmodel.PlayerRecord
-
-	for rows.Next() {
-		var p dsmodel.PlayerRecord
-		err := rows.Scan(&p.UUID, nil, &p.Name, &p.Mark)
-		s.Require().NoError(err)
-		players = append(players, &p)
-	}
-
-	if err := rows.Err(); err != nil {
-		s.Require().NoError(err)
-	}
-
-	return players
-}
-
-func (s *PostgresSuite) getPlayersBySession(sessionUUID string) []*dsmodel.PlayerRecord {
-	sql := `
-		SELECT uuid, name, mark
-		FROM players
-		WHERE session_uuid = $1
-	`
-
-	rows, err := s.tx.Query(context.Background(), sql, sessionUUID)
-	s.Require().NoError(err)
-	defer rows.Close()
-
-	var players []*dsmodel.PlayerRecord
-
-	for rows.Next() {
-		var p dsmodel.PlayerRecord
-		err := rows.Scan(&p.UUID, &p.Name, &p.Mark)
-		s.Require().NoError(err)
-		players = append(players, &p)
-	}
-
-	return players
 }
 
 func (s *PostgresSuite) TestSessionStore() {
-	s.prepareRules()
 	s.prepareSessions()
-	ds := pg.NewSessionDataSource(s.tx)
+	pds := pg.NewSessionDataSource(s.tx)
 
 	s.Run("Default", func() {
-		sessions := s.getAllSessions()
-		players := s.getAllPlayers()
-		s.Equal(2, len(sessions))
-		s.Equal(3, len(players))
+		rs, err := pds.Fetch(context.Background())
+		s.Require().NoError(err)
+		s.Len(rs, 2)
+		total := 0
+		for _, r := range rs {
+			total += len(r.Players)
+		}
+		s.Equal(3, total)
 	})
 
 	s.Run("ExistentSessionFields", func() {
 		s.savepoint("existent_session_fields", func() {
 			updated := &dsmodel.SessionRecord{
-				UUID:      "A",
-				RulesUUID: "A",
-				Board:     &dsmodel.BoardRecord{Width: 1, Height: 1, Cells: []int8{1}},
+				UUID:  "A",
+				Rules: &dsmodel.RulesRecord{BoardWidth: 3, BoardHeight: 3, WinLength: 3},
+				Board: &dsmodel.BoardRecord{Width: 1, Height: 1, Cells: []int8{1}},
 				Players: []*dsmodel.PlayerRecord{
-					{UUID: "A", Name: "A", Mark: "X"},
-					{UUID: "B", Name: "B", Mark: "O"},
+					{UUID: "A", UserUUID: "BOT", Name: "A", Mark: "X"},
+					{UUID: "B", UserUUID: "BOT", Name: "B", Mark: "O"},
 				},
 				Turn:  -1,
 				State: "GameOver",
 				Seed:  int64(-1),
 			}
-			err := ds.Store(context.Background(), updated)
-			s.Require().NoError(err)
+			s.Require().NoError(pds.Store(context.Background(), updated))
 
-			sessions := s.getAllSessions()
-			for _, session := range sessions {
-				if session.UUID == "A" {
-					s.Equal(-1, session.Turn)
-					s.Equal("GameOver", session.State)
-					s.Equal(int64(-1), session.Seed)
-				}
-			}
+			rs, err := pds.Fetch(context.Background(), ds.WithUUID("A"))
+			s.Require().NoError(err)
+			s.Require().Len(rs, 1)
+			s.Equal(-1, rs[0].Turn)
+			s.Equal("GameOver", rs[0].State)
+			s.Equal(int64(-1), rs[0].Seed)
 		})
 	})
 
 	s.Run("ExistentPlayerSlots", func() {
 		s.savepoint("existent_player_slots", func() {
 			updated := &dsmodel.SessionRecord{
-				UUID:      "A",
-				RulesUUID: "A",
-				Board:     &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1, 0, 0, 0, 0, 0, 0, 0, 1}},
+				UUID:  "A",
+				Rules: &dsmodel.RulesRecord{BoardWidth: 3, BoardHeight: 3, WinLength: 3},
+				Board: &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1, 0, 0, 0, 0, 0, 0, 0, 1}},
 				Players: []*dsmodel.PlayerRecord{
-					{UUID: "C", Name: "C", Mark: "X"},
-					{UUID: "D", Name: "D", Mark: "O"},
+					{UUID: "C", UserUUID: "BOT", Name: "C", Mark: "X"},
+					{UUID: "D", UserUUID: "BOT", Name: "D", Mark: "O"},
 				},
 				Turn: 0, State: "Lobby", Seed: int64(0),
 			}
-			err := ds.Store(context.Background(), updated)
-			s.Require().NoError(err)
+			s.Require().NoError(pds.Store(context.Background(), updated))
 
-			players := s.getPlayersBySession("A")
-			s.Equal(2, len(players))
-			for _, p := range players {
+			rs, err := pds.Fetch(context.Background(), ds.WithUUID("A"))
+			s.Require().NoError(err)
+			s.Require().Len(rs, 1)
+			s.Require().Len(rs[0].Players, 2)
+			for _, p := range rs[0].Players {
 				s.NotEqual("A", p.UUID)
 				s.NotEqual("B", p.UUID)
 			}
 
-			s.Equal(3, len(s.getAllPlayers()))
+			all, err := pds.Fetch(context.Background())
+			s.Require().NoError(err)
+			total := 0
+			for _, r := range all {
+				total += len(r.Players)
+			}
+			s.Equal(3, total)
 		})
 	})
 
 	s.Run("NilBoard", func() {
-		err := ds.Store(context.Background(), &dsmodel.SessionRecord{UUID: "new"})
+		err := pds.Store(context.Background(), &dsmodel.SessionRecord{UUID: "new"})
 		s.Error(err)
-		s.Equal(2, len(s.getAllSessions()))
+		rs, err := pds.Fetch(context.Background())
+		s.Require().NoError(err)
+		s.Len(rs, 2)
 	})
 
 	s.Run("EmptyCells", func() {
 		s.savepoint("empty_cells", func() {
-			err := ds.Store(context.Background(), &dsmodel.SessionRecord{
-				UUID:      "new",
-				RulesUUID: "A",
-				Board: &dsmodel.BoardRecord{
-					Cells: []int8{},
-				},
+			err := pds.Store(context.Background(), &dsmodel.SessionRecord{
+				UUID:  "new",
+				Board: &dsmodel.BoardRecord{Cells: []int8{}},
 			})
 			s.Error(err)
-			s.Equal(2, len(s.getAllSessions()))
+			rs, err := pds.Fetch(context.Background())
+			s.Require().NoError(err)
+			s.Len(rs, 2)
 		})
 	})
 
 	s.Run("BoardRoundTrip", func() {
-		sessions := s.getAllSessions()
-		for _, session := range sessions {
-			if session.UUID == "A" {
-				s.Require().NotNil(session.Board)
-				s.Equal(3, session.Board.Width)
-				s.Equal(3, session.Board.Height)
-				s.Equal([]int8{1, 0, 0, 0, 0, 0, 0, 0, 1}, session.Board.Cells)
-			}
-		}
-	})
-
-	s.Run("InvalidRulesReference", func() {
-		s.savepoint("invalid_rules_reference", func() {
-			session := &dsmodel.SessionRecord{
-				UUID:      "orphan",
-				RulesUUID: "nonexistent",
-				Board:     &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1}},
-				Players:   []*dsmodel.PlayerRecord{},
-				State:     "Lobby",
-			}
-			err := ds.Store(context.Background(), session)
-			s.Require().Error(err)
-			s.True(errors.Is(err, appPort.ErrRulesNotFound))
-		})
+		rs, err := pds.Fetch(context.Background(), ds.WithUUID("A"))
+		s.Require().NoError(err)
+		s.Require().Len(rs, 1)
+		s.Require().NotNil(rs[0].Board)
+		s.Equal(3, rs[0].Board.Width)
+		s.Equal(3, rs[0].Board.Height)
+		s.Equal([]int8{1, 0, 0, 0, 0, 0, 0, 0, 1}, rs[0].Board.Cells)
 	})
 
 	s.Run("NoPlayers", func() {
 		s.savepoint("no_players", func() {
 			session := &dsmodel.SessionRecord{
-				UUID:      "no-players",
-				RulesUUID: "A",
-				Board:     &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1}},
-				Players:   nil,
-				State:     "Lobby",
+				UUID:  "no-players",
+				Rules: &dsmodel.RulesRecord{BoardWidth: 3, BoardHeight: 3, WinLength: 3},
+				Board: &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1}},
+				State: "Lobby",
 			}
-			err := ds.Store(context.Background(), session)
+			s.Require().NoError(pds.Store(context.Background(), session))
+
+			rs, err := pds.Fetch(context.Background(), ds.WithUUID("no-players"))
 			s.Require().NoError(err)
-			s.Equal(0, len(s.getPlayersBySession("no-players")))
+			s.Require().Len(rs, 1)
+			s.Nil(rs[0].Players)
 		})
 	})
 }
 
 func (s *PostgresSuite) TestSessionFetch() {
-	s.prepareRules()
 	s.prepareSessions()
-	ds := pg.NewSessionDataSource(s.tx)
+	pds := pg.NewSessionDataSource(s.tx)
 
 	s.Run("Default", func() {
-		r, err := ds.Fetch(context.Background(), "A")
+		rs, err := pds.Fetch(context.Background(), ds.WithUUID("A"))
 		s.Require().NoError(err)
+		s.Require().Len(rs, 1)
+		r := rs[0]
 		s.Equal("A", r.UUID)
-		s.Equal("A", r.RulesUUID)
+		s.Require().NotNil(r.Rules)
+		s.Equal(3, r.Rules.BoardWidth)
+		s.Equal(3, r.Rules.BoardHeight)
+		s.Equal(3, r.Rules.WinLength)
 		s.Equal(0, r.Turn)
-		s.Equal("", r.Winner)
+		s.Nil(r.Winner)
 		s.Equal("Lobby", r.State)
 		s.Equal(int64(0), r.Seed)
 		s.Require().NotNil(r.Board)
@@ -323,106 +226,143 @@ func (s *PostgresSuite) TestSessionFetch() {
 	})
 
 	s.Run("Nonexistent", func() {
-		r, err := ds.Fetch(context.Background(), "Z")
-		s.Error(err)
-		s.True(errors.Is(err, appPort.ErrSessionNotFound))
-		s.Nil(r)
+		rs, err := pds.Fetch(context.Background(), ds.WithUUID("Z"))
+		s.NoError(err)
+		s.Empty(rs)
 	})
 
 	s.Run("NoPlayers", func() {
 		s.savepoint("fetch_no_players", func() {
 			session := &dsmodel.SessionRecord{
-				UUID:      "no-players",
-				RulesUUID: "A",
-				Board:     &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1}},
-				Players:   nil,
-				State:     "Lobby",
+				UUID:  "no-players",
+				Rules: &dsmodel.RulesRecord{BoardWidth: 3, BoardHeight: 3, WinLength: 3},
+				Board: &dsmodel.BoardRecord{Width: 3, Height: 3, Cells: []int8{1}},
+				State: "Lobby",
 			}
-			s.Require().NoError(ds.Store(context.Background(), session))
+			s.Require().NoError(pds.Store(context.Background(), session))
 
-			r, err := ds.Fetch(context.Background(), "no-players")
+			rs, err := pds.Fetch(context.Background(), ds.WithUUID("no-players"))
 			s.Require().NoError(err)
-			s.Nil(r.Players)
+			s.Require().Len(rs, 1)
+			s.Nil(rs[0].Players)
 		})
 	})
 
 	s.Run("CellsRoundTrip", func() {
-		r, err := ds.Fetch(context.Background(), "A")
+		rs, err := pds.Fetch(context.Background(), ds.WithUUID("A"))
 		s.Require().NoError(err)
-		s.Require().NotNil(r.Board)
-		s.Equal([]int8{1, 0, 0, 0, 0, 0, 0, 0, 1}, r.Board.Cells)
+		s.Require().Len(rs, 1)
+		s.Require().NotNil(rs[0].Board)
+		s.Equal([]int8{1, 0, 0, 0, 0, 0, 0, 0, 1}, rs[0].Board.Cells)
 	})
 
 	s.Run("NilCellsRoundTrip", func() {
 		s.savepoint("fetch_nil_cells", func() {
 			_, err := s.tx.Exec(context.Background(), `
-            INSERT INTO sessions (uuid, rules_uuid, board, turn, winner, state, seed)
-            VALUES ('nil-cells', 'A', '{"width":3,"height":3,"cells":null}'::jsonb, 0, '', 'Lobby', 0)
-        `)
+				INSERT INTO sessions (uuid, board, turn, winner, state, seed)
+				VALUES ('nil-cells', '{"width":3,"height":3,"cells":null}'::jsonb, 0, NULL, 'Lobby', 0)
+			`)
+			s.Require().NoError(err)
+			_, err = s.tx.Exec(context.Background(), `
+				INSERT INTO rules (session_uuid, board_width, board_height, win_length)
+				VALUES ('nil-cells', 3, 3, 3)
+			`)
 			s.Require().NoError(err)
 
-			r, err := ds.Fetch(context.Background(), "nil-cells")
+			rs, err := pds.Fetch(context.Background(), ds.WithUUID("nil-cells"))
 			s.Require().NoError(err)
-			s.Require().NotNil(r.Board)
-			s.Nil(r.Board.Cells)
+			s.Require().Len(rs, 1)
+			s.Require().NotNil(rs[0].Board)
+			s.Nil(rs[0].Board.Cells)
 		})
 	})
 
 	s.Run("NilBoardRoundTrip", func() {
 		s.savepoint("fetch_nil_board", func() {
 			_, err := s.tx.Exec(context.Background(), `
-				INSERT INTO sessions (uuid, rules_uuid, board, turn, winner, state, seed)
-				VALUES ('nil-board', 'A', 'null'::jsonb, 0, '', 'Lobby', 0)
+				INSERT INTO sessions (uuid, board, turn, winner, state, seed)
+				VALUES ('nil-board', 'null'::jsonb, 0, NULL, 'Lobby', 0)
+			`)
+			s.Require().NoError(err)
+			_, err = s.tx.Exec(context.Background(), `
+				INSERT INTO rules (session_uuid, board_width, board_height, win_length)
+				VALUES ('nil-board', 3, 3, 3)
 			`)
 			s.Require().NoError(err)
 
-			r, err := ds.Fetch(context.Background(), "nil-board")
+			rs, err := pds.Fetch(context.Background(), ds.WithUUID("nil-board"))
 			s.Require().NoError(err)
-			s.Nil(r.Board)
+			s.Require().Len(rs, 1)
+			s.Nil(rs[0].Board)
 		})
 	})
 
 	s.Run("PlayersIsolation", func() {
-		r, err := ds.Fetch(context.Background(), "A")
+		rs, err := pds.Fetch(context.Background(), ds.WithUUID("A"))
 		s.Require().NoError(err)
-		s.Require().Equal(2, len(r.Players))
-		for _, p := range r.Players {
+		s.Require().Len(rs, 1)
+		s.Require().Equal(2, len(rs[0].Players))
+		for _, p := range rs[0].Players {
 			s.NotEqual("Z", p.UUID)
 		}
+	})
+
+	s.Run("NoOpts", func() {
+		rs, err := pds.Fetch(context.Background())
+		s.Require().NoError(err)
+		s.Len(rs, 2)
+	})
+
+	s.Run("MultipleUUIDs", func() {
+		rs, err := pds.Fetch(context.Background(), ds.WithUUID("A", "B"))
+		s.Require().NoError(err)
+		s.Len(rs, 2)
+	})
+
+	s.Run("ByState", func() {
+		rs, err := pds.Fetch(context.Background(), ds.WithState(model.StatePlaying))
+		s.Require().NoError(err)
+		s.Len(rs, 1)
+	})
+
+	s.Run("ByStateAndMultipleUUIDs", func() {
+		rs, err := pds.Fetch(context.Background(), ds.WithState(model.StateLobby), ds.WithUUID("A", "B"))
+		s.Require().NoError(err)
+		s.Len(rs, 1)
 	})
 }
 
 func (s *PostgresSuite) TestSessionDelete() {
-	s.prepareRules()
 	s.prepareSessions()
-	ds := pg.NewSessionDataSource(s.tx)
+	pds := pg.NewSessionDataSource(s.tx)
 
 	s.Run("Default", func() {
 		s.savepoint("delete_default", func() {
-			err := ds.Delete(context.Background(), "A")
+			s.Require().NoError(pds.Delete(context.Background(), "A"))
+
+			rs, err := pds.Fetch(context.Background())
 			s.Require().NoError(err)
-			sessions := s.getAllSessions()
-			s.Equal(1, len(sessions))
-			for _, session := range sessions {
-				s.NotEqual("A", session.UUID)
-			}
+			s.Require().Len(rs, 1)
+			s.NotEqual("A", rs[0].UUID)
 		})
 	})
 
 	s.Run("Nonexistent", func() {
-		err := ds.Delete(context.Background(), "Z")
+		s.Require().NoError(pds.Delete(context.Background(), "Z"))
+		rs, err := pds.Fetch(context.Background())
 		s.Require().NoError(err)
-		s.Equal(2, len(s.getAllSessions()))
+		s.Len(rs, 2)
 	})
 
 	s.Run("CascadePlayers", func() {
 		s.savepoint("delete_cascade_players", func() {
-			err := ds.Delete(context.Background(), "A")
-			s.Require().NoError(err)
+			s.Require().NoError(pds.Delete(context.Background(), "A"))
 
-			players := s.getAllPlayers()
-			s.Equal(1, len(players))
-			s.Equal("Z", players[0].UUID)
+			rs, err := pds.Fetch(context.Background())
+			s.Require().NoError(err)
+			s.Require().Len(rs, 1)
+			s.Require().Len(rs[0].Players, 1)
+			s.Equal("Z", rs[0].Players[0].UUID)
 		})
 	})
 }

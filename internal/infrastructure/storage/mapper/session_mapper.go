@@ -99,7 +99,7 @@ func ToSessionDomain(r *dsmodel.SessionRecord) (*dmodel.Session, error) {
 		return nil, fmt.Errorf("to session domain: %w", err)
 	}
 
-	winner, err := toPlayerDomain(r.Winner)
+	winner, _ := toPlayerDomain(r.Winner)
 
 	return &dmodel.Session{
 		UUID:    r.UUID,

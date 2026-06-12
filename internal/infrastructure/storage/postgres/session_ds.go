@@ -83,6 +83,14 @@ func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt)
 			return nil, fmt.Errorf("fetch: unmarshal board: %w", err)
 		}
 
+		prev, seen := recordMap[s.UUID]
+		if !seen {
+			s.Rules = &r
+			recordMap[s.UUID] = &s
+			order = append(order, s.UUID)
+			prev = &s
+		}
+
 		if pUUID != nil && pName != nil && pMark != nil {
 			p = &dsmodel.PlayerRecord{
 				UUID:     *pUUID,
@@ -90,19 +98,10 @@ func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt)
 				Name:     *pName,
 				Mark:     *pMark,
 			}
-
-			if *pUUID == *winnerUUID {
-				s.Winner = p
-			}
-		}
-
-		if prev, ok := recordMap[s.UUID]; ok {
 			prev.Players = append(prev.Players, p)
-		} else {
-			s.Rules = &r
-			s.Players = append(s.Players, p)
-			recordMap[s.UUID] = &s
-			order = append(order, s.UUID)
+			if winnerUUID != nil && *pUUID == *winnerUUID {
+				prev.Winner = p
+			}
 		}
 	}
 
@@ -141,7 +140,7 @@ func (s *SessionDataSource) Store(parent context.Context, session *dsmodel.Sessi
 	if err != nil {
 		return fmt.Errorf("store: begin tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback(ctx) //nolint:errcheck
 
 	batch := &pgx.Batch{}
 
@@ -165,7 +164,10 @@ func (s *SessionDataSource) Store(parent context.Context, session *dsmodel.Sessi
 	for _, p := range session.Players {
 		batch.Queue(`INSERT INTO players(uuid, session_uuid, user_uuid, name, mark)
 					VALUES ($1, $2, $3, $4, $5)
-					ON CONFLICT(uuid) DO NOTHING
+					ON CONFLICT(session_uuid, mark) DO UPDATE
+					SET uuid = EXCLUDED.uuid,
+						user_uuid = EXCLUDED.user_uuid,
+						name = EXCLUDED.name
 		`, p.UUID, session.UUID, p.UserUUID, p.Name, p.Mark)
 	}
 
