@@ -1,9 +1,10 @@
 package model
 
 type Player struct {
-	UUID string
-	Name string
-	Mark Mark
+	UUID     string
+	UserUUID string
+	Name     string
+	Mark     Mark
 }
 
 type Mark int8
@@ -37,18 +38,32 @@ func (m Mark) String() string {
 	}
 }
 
-func NewPlayer(UUID, name string, mark Mark) *Player {
+func NewPlayer(UUID, UserUUID, name string, mark Mark) *Player {
 	return &Player{
-		UUID: UUID,
-		Name: name,
-		Mark: mark,
+		UUID:     UUID,
+		UserUUID: UserUUID,
+		Name:     name,
+		Mark:     mark,
+	}
+}
+
+func NewBot(mark Mark) *Player {
+	return &Player{
+		UUID:     "BOT",
+		UserUUID: "BOT",
+		Name:     "BOT",
+		Mark:     mark,
 	}
 }
 
 func (p *Player) Clone() *Player {
+	if p == nil {
+		return nil
+	}
 	return &Player{
-		UUID: p.UUID,
-		Name: p.Name,
-		Mark: p.Mark,
+		UUID:     p.UUID,
+		UserUUID: p.UserUUID,
+		Name:     p.Name,
+		Mark:     p.Mark,
 	}
 }

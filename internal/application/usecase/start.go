@@ -26,10 +26,14 @@ func (uc *Start) Execute(ctx context.Context, cmd *port.StartCommand) (*model.Se
 		return fmt.Errorf("start (session %s, player %s): %w", cmd.SessionUUID, cmd.PlayerUUID, err)
 	}
 
-	session, err := uc.sessionRepo.Get(ctx, cmd.SessionUUID)
+	sessions, err := uc.sessionRepo.Get(ctx, port.WithUUID(cmd.SessionUUID))
 	if err != nil {
 		return nil, wrap(err)
 	}
+	if len(sessions) != 1 {
+		return nil, wrap(port.ErrReturnedNotOne)
+	}
+	session := sessions[0]
 
 	if session.State != model.StateLobby {
 		return nil, wrap(port.ErrGameAlreadyStarted)

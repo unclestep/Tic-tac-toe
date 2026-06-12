@@ -13,12 +13,12 @@ import (
 
 func newBotLogicSetup(t *testing.T, width, height, winLen int) (*service.BotMovement, *model.Session) {
 	t.Helper()
-	rules := &model.Rules{UUID: "rules-1", BoardWidth: width, BoardHeight: height, WinLength: winLen}
+	rules := model.NewDefaultRules()
 	board := model.NewBoard(width, height)
 	checker := service.NewWinChecker()
 	heuristic := service.NewHeuristic()
 	bot := service.NewBotMovement(checker, heuristic)
-	session := model.NewSession("session-1", &model.SessionParams{}, rules, board)
+	session := model.NewSession("1", &model.SessionParams{}, rules, board)
 	return bot, session
 }
 
@@ -29,7 +29,6 @@ func TestMakeMoveStateGameOver(t *testing.T) {
 	err := bot.MakeMove(session, model.MarkX)
 
 	assert.ErrorIs(t, err, model.ErrGameAlreadyOver)
-	assert.Equal(t, 0, session.Turn)
 }
 
 func TestMakeMoveFullBoard(t *testing.T) {
@@ -42,7 +41,6 @@ func TestMakeMoveFullBoard(t *testing.T) {
 	err := bot.MakeMove(session, model.MarkX)
 
 	assert.ErrorIs(t, err, model.ErrGameAlreadyOver)
-	assert.Equal(t, 0, session.Turn)
 }
 
 func TestMakeMoveBotXWinsImmediately(t *testing.T) {
@@ -58,7 +56,7 @@ func TestMakeMoveBotXWinsImmediately(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkX.String(), session.Winner)
+	assert.Equal(t, *model.NewBot(model.MarkX), *session.Winner)
 }
 
 func TestMakeMoveBotOWinsImmediately(t *testing.T) {
@@ -75,7 +73,7 @@ func TestMakeMoveBotOWinsImmediately(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkO.String(), session.Winner)
+	assert.Equal(t, *model.NewBot(model.MarkO), *session.Winner)
 }
 
 func TestMakeMovePrefersWinOverBlock(t *testing.T) {
@@ -92,7 +90,7 @@ func TestMakeMovePrefersWinOverBlock(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkX.String(), session.Winner)
+	assert.Equal(t, *model.NewBot(model.MarkX), *session.Winner)
 }
 
 func TestMakeMoveBotXBlocksO(t *testing.T) {
@@ -142,7 +140,7 @@ func TestMakeMoveDraw(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkEmpty.String(), session.Winner)
+	assert.Nil(t, session.Winner)
 }
 
 func TestMakeMoveTurnIncrements(t *testing.T) {

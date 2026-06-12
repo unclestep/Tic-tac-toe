@@ -5,6 +5,10 @@ import (
 	"tictactoe/pkg/geometry"
 )
 
+type ContextKey string
+
+const UserUUIDKey ContextKey = "UserUUID"
+
 type CreateCommand struct {
 	Rules         *model.Rules
 	SessionParams *model.SessionParams

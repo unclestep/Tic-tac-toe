@@ -1,13 +1,8 @@
 {
   "swagger": "2.0",
   "info": {
-    "description": "Tic-Tac-Toe Game API",
-    "title": "Tic-Tac-Toe API",
-    "contact": {},
-    "version": "1.0"
+    "contact": {}
   },
-  "host": "localhost:12121",
-  "basePath": "/",
   "paths": {
     "/game/create": {
       "post": {

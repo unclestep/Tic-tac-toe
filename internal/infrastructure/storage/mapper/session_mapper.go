@@ -2,20 +2,29 @@ package mapper
 
 import (
 	"fmt"
+
 	dmodel "tictactoe/internal/domain/model"
 	dsmodel "tictactoe/internal/infrastructure/storage/model"
 )
 
 func ToSessionStorage(s *dmodel.Session) *dsmodel.SessionRecord {
 	return &dsmodel.SessionRecord{
-		UUID:      s.UUID,
-		RulesUUID: s.Rules.UUID,
-		Board:     toBoardStorage(s.Board),
-		Players:   convPlayersToStorage(s.Players),
-		Turn:      s.Turn,
-		Winner:    s.Winner,
-		State:     stateToString(s.State),
-		Seed:      s.Params.Seed,
+		UUID:    s.UUID,
+		Rules:   toRulesStorage(s.Rules),
+		Board:   toBoardStorage(s.Board),
+		Players: convPlayersToStorage(s.Players),
+		Turn:    s.Turn,
+		Winner:  toPlayerStorage(s.Winner),
+		State:   StateToString(s.State),
+		Seed:    s.Params.Seed,
+	}
+}
+
+func toRulesStorage(r *dmodel.Rules) *dsmodel.RulesRecord {
+	return &dsmodel.RulesRecord{
+		BoardWidth:  r.BoardWidth,
+		BoardHeight: r.BoardHeight,
+		WinLength:   r.WinLength,
 	}
 }
 
@@ -26,7 +35,7 @@ func toBoardStorage(b *dmodel.Board) *dsmodel.BoardRecord {
 		Cells:  make([]int8, b.Width*b.Height),
 	}
 
-	for i, cell := range b.CloneCells() {
+	for i, cell := range b.Cells {
 		r.Cells[i] = int8(cell)
 	}
 
@@ -42,10 +51,14 @@ func convPlayersToStorage(players []*dmodel.Player) []*dsmodel.PlayerRecord {
 }
 
 func toPlayerStorage(p *dmodel.Player) *dsmodel.PlayerRecord {
+	if p == nil {
+		return nil
+	}
 	return &dsmodel.PlayerRecord{
-		UUID: p.UUID,
-		Name: p.Name,
-		Mark: markToString(p.Mark),
+		UUID:     p.UUID,
+		UserUUID: p.UserUUID,
+		Name:     p.Name,
+		Mark:     markToString(p.Mark),
 	}
 }
 
@@ -62,7 +75,7 @@ func markToString(mark dmodel.Mark) string {
 	}
 }
 
-func stateToString(state dmodel.State) string {
+func StateToString(state dmodel.State) string {
 	switch state {
 	case dmodel.StateLobby:
 		return "Lobby"
@@ -86,15 +99,26 @@ func ToSessionDomain(r *dsmodel.SessionRecord) (*dmodel.Session, error) {
 		return nil, fmt.Errorf("to session domain: %w", err)
 	}
 
+	winner, _ := toPlayerDomain(r.Winner)
+
 	return &dmodel.Session{
 		UUID:    r.UUID,
+		Rules:   toRulesDomain(r.Rules),
 		Board:   toBoardDomain(r.Board),
 		Players: players,
 		Turn:    r.Turn,
-		Winner:  r.Winner,
+		Winner:  winner,
 		State:   state,
 		Params:  &dmodel.SessionParams{Seed: r.Seed},
 	}, nil
+}
+
+func toRulesDomain(r *dsmodel.RulesRecord) *dmodel.Rules {
+	return &dmodel.Rules{
+		BoardWidth:  r.BoardWidth,
+		BoardHeight: r.BoardHeight,
+		WinLength:   r.WinLength,
+	}
 }
 
 func toBoardDomain(r *dsmodel.BoardRecord) *dmodel.Board {
@@ -118,15 +142,20 @@ func convPlayersToDomain(records []*dsmodel.PlayerRecord) ([]*dmodel.Player, err
 }
 
 func toPlayerDomain(r *dsmodel.PlayerRecord) (*dmodel.Player, error) {
+	if r == nil {
+		return nil, fmt.Errorf("to player domain: nil player passed")
+	}
+
 	mark, err := stringToMark(r.Mark)
 	if err != nil {
 		return nil, fmt.Errorf("to player domain: %w", err)
 	}
 
 	return &dmodel.Player{
-		UUID: r.UUID,
-		Name: r.Name,
-		Mark: mark,
+		UUID:     r.UUID,
+		UserUUID: r.UserUUID,
+		Name:     r.Name,
+		Mark:     mark,
 	}, nil
 }
 

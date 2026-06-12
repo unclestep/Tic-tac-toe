@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+
 	"tictactoe/internal/domain/model"
 	"tictactoe/pkg/geometry"
 )
@@ -26,7 +27,9 @@ func (m *HumanMovement) MakeMove(session *model.Session, player *model.Player, p
 
 	mark, state := m.winChecker.CheckWin(session.Board, session.Rules.WinLength)
 	if state == model.StateGameOver {
-		session.Winner = mark.String()
+		if mark != model.MarkEmpty {
+			session.Winner = player
+		}
 		session.State = model.StateGameOver
 	}
 

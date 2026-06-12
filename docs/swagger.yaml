@@ -1,4 +1,3 @@
-basePath: /
 definitions:
   dto.ConnectRequest:
     properties:
@@ -84,12 +83,8 @@ definitions:
       "y":
         type: integer
     type: object
-host: localhost:12121
 info:
   contact: {}
-  description: Tic-Tac-Toe Game API
-  title: Tic-Tac-Toe API
-  version: "1.0"
 paths:
   /game/{session_id}/connect:
     post:

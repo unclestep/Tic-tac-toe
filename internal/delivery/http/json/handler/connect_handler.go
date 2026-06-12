@@ -5,16 +5,17 @@ import (
 	"net/http"
 
 	"tictactoe/internal/application/port"
+	j "tictactoe/internal/delivery/http/json"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/delivery/http/json/mapper"
 )
 
 type ConnectHandler struct {
 	uc port.ConnectUseCase
-	em *ErrorMapper
+	em *j.ErrorMapper
 }
 
-func NewConnectHandler(uc port.ConnectUseCase, em *ErrorMapper) *ConnectHandler {
+func NewConnectHandler(uc port.ConnectUseCase, em *j.ErrorMapper) *ConnectHandler {
 	return &ConnectHandler{
 		uc: uc,
 		em: em,
@@ -23,7 +24,8 @@ func NewConnectHandler(uc port.ConnectUseCase, em *ErrorMapper) *ConnectHandler 
 
 // @Summary     Connect a Player
 // @Tags        game
-// @Param  session_id  path  string  true  "Session ID"
+// @Security    BasicAuth
+// @Param  session_uuid  path  string  true  "Session UUID"
 // @Param       body       body     dto.ConnectRequest true "Player's data"
 // @Success     200        {object} dto.SessionResponse
 // @Failure     400        {object} dto.ErrorResponse
@@ -33,7 +35,7 @@ func (h *ConnectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req dto.ConnectRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "invalid request body", http.StatusBadRequest)
+		j.WriteError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -41,9 +43,9 @@ func (h *ConnectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.uc.Execute(r.Context(), cmd)
 	if err != nil {
-		writeError(w, err.Error(), h.em.Status(err))
+		j.WriteError(w, err.Error(), h.em.Status(err))
 		return
 	}
 
-	writeJSON(w, mapper.ToSessionResponse(session), http.StatusOK)
+	j.WriteJSON(w, mapper.ToSessionResponse(session), http.StatusOK)
 }

@@ -13,23 +13,21 @@ import (
 
 func newMovementSetup(t *testing.T, width, height, winLen int) (*service.HumanMovement, *model.Session) {
 	t.Helper()
-	rules := &model.Rules{UUID: "rules-1", BoardWidth: width, BoardHeight: height, WinLength: winLen}
+	rules := model.NewDefaultRules()
 	checker := service.NewWinChecker()
 	movement := service.NewHumanMovement(checker)
 	board := model.NewBoard(width, height)
-	session := model.NewSession("session-1", &model.SessionParams{Seed: 0}, rules, board)
+	session := model.NewSession("1", &model.SessionParams{Seed: 0}, rules, board)
 	return movement, session
 }
 
 func newPlayerWithMark(uuid string, mark model.Mark) *model.Player {
-	p := model.NewPlayer(uuid, "player", model.MarkX)
-	p.Mark = mark
-	return p
+	return model.NewPlayer(uuid, uuid, uuid, mark)
 }
 
 func TestMakeOutOfBounds(t *testing.T) {
 	movement, session := newMovementSetup(t, 3, 3, 3)
-	playerX := newPlayerWithMark("p1", model.MarkX)
+	playerX := newPlayerWithMark("1", model.MarkX)
 
 	err := movement.MakeMove(session, playerX, geometry.NewPoint(10, 10))
 
@@ -39,8 +37,8 @@ func TestMakeOutOfBounds(t *testing.T) {
 
 func TestMakeCellOccupied(t *testing.T) {
 	movement, session := newMovementSetup(t, 3, 3, 3)
-	playerX := newPlayerWithMark("p1", model.MarkX)
-	playerO := newPlayerWithMark("p2", model.MarkO)
+	playerX := newPlayerWithMark("1", model.MarkX)
+	playerO := newPlayerWithMark("2", model.MarkO)
 
 	require.NoError(t, movement.MakeMove(session, playerX, geometry.NewPoint(0, 0)))
 	err := movement.MakeMove(session, playerO, geometry.NewPoint(0, 0))
@@ -51,7 +49,7 @@ func TestMakeCellOccupied(t *testing.T) {
 
 func TestMakeValidMoveGameContinues(t *testing.T) {
 	movement, session := newMovementSetup(t, 3, 3, 3)
-	playerX := newPlayerWithMark("p1", model.MarkX)
+	playerX := newPlayerWithMark("1", model.MarkX)
 
 	err := movement.MakeMove(session, playerX, geometry.NewPoint(0, 0))
 
@@ -62,8 +60,8 @@ func TestMakeValidMoveGameContinues(t *testing.T) {
 
 func TestMakeTurnIncrements(t *testing.T) {
 	movement, session := newMovementSetup(t, 3, 3, 3)
-	playerX := newPlayerWithMark("p1", model.MarkX)
-	playerO := newPlayerWithMark("p2", model.MarkO)
+	playerX := newPlayerWithMark("1", model.MarkX)
+	playerO := newPlayerWithMark("2", model.MarkO)
 
 	require.NoError(t, movement.MakeMove(session, playerX, geometry.NewPoint(0, 0)))
 	require.NoError(t, movement.MakeMove(session, playerO, geometry.NewPoint(1, 0)))
@@ -76,13 +74,13 @@ func TestMakeXWins(t *testing.T) {
 	movement, session := newMovementSetup(t, 3, 3, 3)
 	require.NoError(t, session.Board.SetMark(model.MarkX, geometry.NewPoint(0, 0)))
 	require.NoError(t, session.Board.SetMark(model.MarkX, geometry.NewPoint(0, 1)))
-	playerX := newPlayerWithMark("p1", model.MarkX)
+	playerX := newPlayerWithMark("1", model.MarkX)
 
 	err := movement.MakeMove(session, playerX, geometry.NewPoint(0, 2))
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkX.String(), session.Winner)
+	assert.Equal(t, *playerX, *session.Winner)
 	assert.Equal(t, 1, session.Turn)
 }
 
@@ -90,13 +88,13 @@ func TestMakeOWins(t *testing.T) {
 	movement, session := newMovementSetup(t, 3, 3, 3)
 	require.NoError(t, session.Board.SetMark(model.MarkO, geometry.NewPoint(0, 0)))
 	require.NoError(t, session.Board.SetMark(model.MarkO, geometry.NewPoint(1, 0)))
-	playerO := newPlayerWithMark("p2", model.MarkO)
+	playerO := newPlayerWithMark("2", model.MarkO)
 
 	err := movement.MakeMove(session, playerO, geometry.NewPoint(2, 0))
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkO.String(), session.Winner)
+	assert.Equal(t, *playerO, *session.Winner)
 	assert.Equal(t, 1, session.Turn)
 }
 
@@ -105,13 +103,13 @@ func TestMakeDraw(t *testing.T) {
 	require.NoError(t, session.Board.SetMark(model.MarkX, geometry.NewPoint(0, 0)))
 	require.NoError(t, session.Board.SetMark(model.MarkO, geometry.NewPoint(1, 0)))
 	require.NoError(t, session.Board.SetMark(model.MarkX, geometry.NewPoint(0, 1)))
-	playerO := newPlayerWithMark("p2", model.MarkO)
+	playerO := newPlayerWithMark("2", model.MarkO)
 
 	err := movement.MakeMove(session, playerO, geometry.NewPoint(1, 1))
 
 	require.NoError(t, err)
 	assert.Equal(t, model.StateGameOver, session.State)
-	assert.Equal(t, model.MarkEmpty.String(), session.Winner)
+	assert.Nil(t, session.Winner)
 	assert.Equal(t, 1, session.Turn)
 }
 
@@ -119,7 +117,7 @@ func TestMakeAfterGameOver(t *testing.T) {
 	movement, session := newMovementSetup(t, 3, 3, 3)
 	require.NoError(t, session.Board.SetMark(model.MarkX, geometry.NewPoint(0, 0)))
 	require.NoError(t, session.Board.SetMark(model.MarkX, geometry.NewPoint(0, 1)))
-	playerX := newPlayerWithMark("p1", model.MarkX)
+	playerX := newPlayerWithMark("1", model.MarkX)
 
 	require.NoError(t, movement.MakeMove(session, playerX, geometry.NewPoint(0, 2)))
 	require.Equal(t, model.StateGameOver, session.State)

@@ -6,10 +6,10 @@ services:
     ports:
       - "${TICTACTOE_PORT}:${TICTACTOE_PORT}"
     depends_on:
-      postgres:
+      tic-tac-toe-postgres:
         condition: service_healthy
 
-  postgres:
+  tic-tac-toe-postgres:
     image: postgres:18.3-alpine
     container_name: tic-tac-toe-postgres
     environment:

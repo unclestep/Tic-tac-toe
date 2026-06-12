@@ -15,9 +15,9 @@ import (
 
 func TestMakeMoveSessionNotFound(t *testing.T) {
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "nonexistent").Return(nil, port.ErrSessionNotFound)
+	repo.On("Get", mock.Anything, "?").Return(nil, port.ErrSessionNotFound)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "nonexistent", PlayerUUID: "p1"}
+	cmd := &port.MakeMoveCommand{SessionUUID: "?", PlayerUUID: "1"}
 	res, err := usecase.NewMakeMove(repo, nil, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, port.ErrSessionNotFound)
@@ -27,12 +27,12 @@ func TestMakeMoveSessionNotFound(t *testing.T) {
 }
 
 func TestMakeMoveGameNotStarted(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "1"}
 	res, err := usecase.NewMakeMove(repo, nil, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, port.ErrGameNotStarted)
@@ -42,13 +42,13 @@ func TestMakeMoveGameNotStarted(t *testing.T) {
 }
 
 func TestMakeMoveGameAlreadyOver(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.State = model.StateGameOver
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "1"}
 	res, err := usecase.NewMakeMove(repo, nil, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, model.ErrGameAlreadyOver)
@@ -58,13 +58,13 @@ func TestMakeMoveGameAlreadyOver(t *testing.T) {
 }
 
 func TestMakeMovePlayerNotBelongToSession(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Start()
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "nonexistent"}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "?"}
 	res, err := usecase.NewMakeMove(repo, nil, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, port.ErrPlayerNotBelongToSession)
@@ -74,17 +74,13 @@ func TestMakeMovePlayerNotBelongToSession(t *testing.T) {
 }
 
 func TestMakeMovePlayerCantMakeMove(t *testing.T) {
-	session := newSessionWithPlayers(
-		t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
 	session.Start()
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p2"}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "2"}
 	res, err := usecase.NewMakeMove(repo, nil, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, port.ErrPlayerCantMakeMove)
@@ -96,7 +92,7 @@ func TestMakeMovePlayerCantMakeMove(t *testing.T) {
 func TestMakeMoveHumanMoverErr(t *testing.T) {
 	errHuman := errors.New("human move error")
 
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Start()
 	turnPlayer, _ := session.GetTurnPlayer()
 
@@ -104,9 +100,9 @@ func TestMakeMoveHumanMoverErr(t *testing.T) {
 	humanMover.On("MakeMove", session, turnPlayer, geometry.Point{}).Return(errHuman)
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p1", MarkPos: geometry.Point{}}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "1", MarkPos: geometry.Point{}}
 	res, err := usecase.NewMakeMove(repo, humanMover, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, errHuman)
@@ -119,7 +115,7 @@ func TestMakeMoveHumanMoverErr(t *testing.T) {
 func TestMakeMoveBotMoverErr(t *testing.T) {
 	errBot := errors.New("bot move error")
 
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Start()
 	turnPlayer, _ := session.GetTurnPlayer()
 
@@ -130,9 +126,9 @@ func TestMakeMoveBotMoverErr(t *testing.T) {
 	botMover.On("MakeMove", session, model.MarkO).Return(errBot)
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p1", MarkPos: geometry.Point{}}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "1", MarkPos: geometry.Point{}}
 	res, err := usecase.NewMakeMove(repo, humanMover, botMover).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, errBot)
@@ -146,11 +142,7 @@ func TestMakeMoveBotMoverErr(t *testing.T) {
 func TestMakeMoveSessionRepoErr(t *testing.T) {
 	errRepo := errors.New("session db error")
 
-	session := newSessionWithPlayers(
-		t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
 	session.Start()
 	turnPlayer, _ := session.GetTurnPlayer()
 
@@ -158,10 +150,10 @@ func TestMakeMoveSessionRepoErr(t *testing.T) {
 	humanMover.On("MakeMove", session, turnPlayer, geometry.Point{}).Return(nil)
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(errRepo)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p1", MarkPos: geometry.Point{}}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "1", MarkPos: geometry.Point{}}
 	res, err := usecase.NewMakeMove(repo, humanMover, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, errRepo)
@@ -171,11 +163,7 @@ func TestMakeMoveSessionRepoErr(t *testing.T) {
 }
 
 func TestMakeMoveSuccessFullSession(t *testing.T) {
-	session := newSessionWithPlayers(
-		t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
 	session.Start()
 	turnPlayer, _ := session.GetTurnPlayer()
 
@@ -185,10 +173,10 @@ func TestMakeMoveSuccessFullSession(t *testing.T) {
 	botMover := &mockBotMover{}
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p1", MarkPos: geometry.Point{}}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "1", MarkPos: geometry.Point{}}
 	res, err := usecase.NewMakeMove(repo, humanMover, botMover).Execute(context.Background(), cmd)
 
 	assert.NoError(t, err)
@@ -200,7 +188,7 @@ func TestMakeMoveSuccessFullSession(t *testing.T) {
 }
 
 func TestMakeMoveSuccessSoloSession(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Start()
 	turnPlayer, _ := session.GetTurnPlayer()
 
@@ -211,10 +199,10 @@ func TestMakeMoveSuccessSoloSession(t *testing.T) {
 	botMover.On("MakeMove", session, model.MarkO).Return(nil)
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p1", MarkPos: geometry.Point{}}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "1", MarkPos: geometry.Point{}}
 	res, err := usecase.NewMakeMove(repo, humanMover, botMover).Execute(context.Background(), cmd)
 
 	assert.NoError(t, err)
@@ -225,7 +213,7 @@ func TestMakeMoveSuccessSoloSession(t *testing.T) {
 }
 
 func TestMakeMoveGameOverAfterHumanMove(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Start()
 	turnPlayer, _ := session.GetTurnPlayer()
 
@@ -239,10 +227,10 @@ func TestMakeMoveGameOverAfterHumanMove(t *testing.T) {
 	botMover := &mockBotMover{}
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(nil)
 
-	cmd := &port.MakeMoveCommand{SessionUUID: "session-1", PlayerUUID: "p1", MarkPos: geometry.Point{}}
+	cmd := &port.MakeMoveCommand{SessionUUID: "1", PlayerUUID: "1", MarkPos: geometry.Point{}}
 	res, err := usecase.NewMakeMove(repo, humanMover, botMover).Execute(context.Background(), cmd)
 
 	assert.NoError(t, err)

@@ -9,12 +9,12 @@ import (
 )
 
 func TestNewPlayer(t *testing.T) {
-	p := model.NewPlayer("a", "a", model.MarkX)
+	p := model.NewPlayer("a", "a", "a", model.MarkX)
 	assert.NotNil(t, p)
 }
 
 func TestPlayerClone(t *testing.T) {
-	original := model.NewPlayer("a", "a", model.MarkX)
+	original := model.NewPlayer("a", "a", "a", model.MarkX)
 	assert.NotNil(t, original)
 
 	clone := original.Clone()

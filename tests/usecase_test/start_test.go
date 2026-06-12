@@ -20,9 +20,9 @@ const (
 
 func TestStartSessionNotFound(t *testing.T) {
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "nonexistent").Return(nil, port.ErrSessionNotFound)
+	repo.On("Get", mock.Anything, "?").Return(nil, port.ErrSessionNotFound)
 
-	cmd := &port.StartCommand{SessionUUID: "nonexistent", PlayerUUID: "p1"}
+	cmd := &port.StartCommand{SessionUUID: "?", PlayerUUID: "1"}
 	res, err := usecase.NewStart(repo, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, port.ErrSessionNotFound)
@@ -32,13 +32,13 @@ func TestStartSessionNotFound(t *testing.T) {
 }
 
 func TestStartGameAlreadyStarted(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Start()
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.StartCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.StartCommand{SessionUUID: "1", PlayerUUID: "1"}
 	res, err := usecase.NewStart(repo, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, port.ErrGameAlreadyStarted)
@@ -48,12 +48,12 @@ func TestStartGameAlreadyStarted(t *testing.T) {
 }
 
 func TestStartPlayerNotBelongToSession(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.StartCommand{SessionUUID: "session-1", PlayerUUID: "nonexistent"}
+	cmd := &port.StartCommand{SessionUUID: "1", PlayerUUID: "?"}
 	res, err := usecase.NewStart(repo, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, port.ErrPlayerNotBelongToSession)
@@ -63,19 +63,15 @@ func TestStartPlayerNotBelongToSession(t *testing.T) {
 }
 
 func TestStartFullSession(t *testing.T) {
-	session := newSessionWithPlayers(
-		t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(nil)
 
 	botMover := &mockBotMover{}
 
-	cmd := &port.StartCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.StartCommand{SessionUUID: "1", PlayerUUID: "1"}
 	res, err := usecase.NewStart(repo, botMover).Execute(context.Background(), cmd)
 
 	assert.NoError(t, err)
@@ -88,16 +84,16 @@ func TestStartFullSession(t *testing.T) {
 }
 
 func TestStartPlayerGoesFirst(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Params.Seed = seedPlayerFirst
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(nil)
 
 	botMover := &mockBotMover{}
 
-	cmd := &port.StartCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.StartCommand{SessionUUID: "1", PlayerUUID: "1"}
 	res, err := usecase.NewStart(repo, botMover).Execute(context.Background(), cmd)
 
 	assert.NoError(t, err)
@@ -109,17 +105,17 @@ func TestStartPlayerGoesFirst(t *testing.T) {
 }
 
 func TestStartBotGoesFirst(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Params.Seed = seedBotFirst
 
 	botMover := &mockBotMover{}
 	botMover.On("MakeMove", session, model.MarkX).Return(nil)
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(nil)
 
-	cmd := &port.StartCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.StartCommand{SessionUUID: "1", PlayerUUID: "1"}
 	res, err := usecase.NewStart(repo, botMover).Execute(context.Background(), cmd)
 
 	assert.NoError(t, err)
@@ -132,16 +128,16 @@ func TestStartBotGoesFirst(t *testing.T) {
 func TestStartBotMoverErr(t *testing.T) {
 	errBot := errors.New("bot move error")
 
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	session.Params.Seed = seedBotFirst
 
 	botMover := &mockBotMover{}
 	botMover.On("MakeMove", session, model.MarkX).Return(errBot)
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	cmd := &port.StartCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.StartCommand{SessionUUID: "1", PlayerUUID: "1"}
 	res, err := usecase.NewStart(repo, botMover).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, errBot)
@@ -153,17 +149,13 @@ func TestStartBotMoverErr(t *testing.T) {
 
 func TestStartSaveErr(t *testing.T) {
 	errRepo := errors.New("session db error")
-	session := newSessionWithPlayers(
-		t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
 
 	repo := &mockSessionRepo{}
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(errRepo)
 
-	cmd := &port.StartCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.StartCommand{SessionUUID: "1", PlayerUUID: "1"}
 	res, err := usecase.NewStart(repo, nil).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, errRepo)

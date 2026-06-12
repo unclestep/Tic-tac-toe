@@ -3,42 +3,56 @@ package repository
 import (
 	"context"
 	"fmt"
+
+	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
+	"tictactoe/internal/infrastructure/storage/ds"
 	"tictactoe/internal/infrastructure/storage/mapper"
-	storagePort "tictactoe/internal/infrastructure/storage/port"
 )
 
 type SessionRepo struct {
-	sds storagePort.SessionDataSource
-	rds storagePort.RulesDataSource
+	sds ds.SessionDataSource
 }
 
-func NewSessionRepo(sds storagePort.SessionDataSource, rds storagePort.RulesDataSource) *SessionRepo {
+func NewSessionRepo(sds ds.SessionDataSource) *SessionRepo {
 	return &SessionRepo{
 		sds: sds,
-		rds: rds,
 	}
 }
 
-func (r *SessionRepo) Get(ctx context.Context, id string) (*model.Session, error) {
-	srecord, err := r.sds.Fetch(ctx, id)
+func SessionDomainOptsToDatasourceOpts(c *port.SessionGetConfig) []ds.SessionOpt {
+	var opts []ds.SessionOpt
+	if c.UUIDs != nil {
+		opts = append(opts, ds.WithUUID(c.UUIDs...))
+	}
+	if c.State != nil {
+		opts = append(opts, ds.WithState(*c.State))
+	}
+	return opts
+}
+
+func (r *SessionRepo) Get(ctx context.Context, opts ...port.SessionGetOpt) ([]*model.Session, error) {
+	cfg := &port.SessionGetConfig{}
+	for _, opt := range opts {
+		opt.ApplyToSession(cfg)
+	}
+
+	records, err := r.sds.Fetch(ctx, SessionDomainOptsToDatasourceOpts(cfg)...)
 	if err != nil {
 		return nil, fmt.Errorf("get session: %w", err)
 	}
 
-	dsession, err := mapper.ToSessionDomain(srecord)
-	if err != nil {
-		return nil, fmt.Errorf("get session: %w", err)
+	sessions := make([]*model.Session, len(records))
+
+	for i, record := range records {
+		session, err := mapper.ToSessionDomain(record)
+		if err != nil {
+			return nil, fmt.Errorf("get session: %w", err)
+		}
+		sessions[i] = session
 	}
 
-	rrecord, err := r.rds.Fetch(ctx, srecord.RulesUUID)
-	if err != nil {
-		return nil, fmt.Errorf("get session: %w", err)
-	}
-	drules := mapper.ToRulesDomain(rrecord)
-	dsession.Rules = drules
-
-	return dsession, nil
+	return sessions, nil
 }
 
 func (r *SessionRepo) Save(ctx context.Context, session *model.Session) error {

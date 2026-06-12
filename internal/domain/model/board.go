@@ -59,6 +59,9 @@ func NewBoardFromCells(width, height int, cells []Mark) *Board {
 }
 
 func (b *Board) Clone() *Board {
+	if b == nil {
+		return nil
+	}
 	return &Board{
 		Width:  b.Width,
 		Height: b.Height,

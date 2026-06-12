@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"tictactoe/internal/application/port"
 	"tictactoe/internal/domain/model"
 	"tictactoe/pkg/geometry"
 
@@ -15,33 +16,24 @@ type mockSessionRepo struct {
 	mock.Mock
 }
 
-func (m *mockSessionRepo) Get(ctx context.Context, uuid string) (*model.Session, error) {
+func (m *mockSessionRepo) Get(ctx context.Context, opts ...port.SessionGetOpt) ([]*model.Session, error) {
+	cfg := &port.SessionGetConfig{}
+	for _, o := range opts {
+		o.ApplyToSession(cfg)
+	}
+	uuid := ""
+	if len(cfg.UUIDs) > 0 {
+		uuid = cfg.UUIDs[0]
+	}
 	args := m.Called(ctx, uuid)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*model.Session), args.Error(1)
+	return []*model.Session{args.Get(0).(*model.Session)}, args.Error(1)
 }
 
 func (m *mockSessionRepo) Save(ctx context.Context, session *model.Session) error {
 	args := m.Called(ctx, session)
-	return args.Error(0)
-}
-
-type mockRulesRepo struct {
-	mock.Mock
-}
-
-func (m *mockRulesRepo) Get(ctx context.Context, uuid string) (*model.Rules, error) {
-	args := m.Called(ctx, uuid)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*model.Rules), args.Error(1)
-}
-
-func (m *mockRulesRepo) Save(ctx context.Context, rules *model.Rules) error {
-	args := m.Called(ctx, rules)
 	return args.Error(0)
 }
 
@@ -63,11 +55,14 @@ func (m *mockHumanMover) MakeMove(session *model.Session, player *model.Player, 
 	return args.Error(0)
 }
 
+func newPlayer(uuid string, mark model.Mark) *model.Player {
+	return model.NewPlayer(uuid, uuid, uuid, mark)
+}
+
 func newSessionWithPlayers(t *testing.T, players ...*model.Player) *model.Session {
 	t.Helper()
-	rules := &model.Rules{UUID: "rules-1", BoardWidth: 3, BoardHeight: 3, WinLength: 3}
 	board := model.NewBoard(3, 3)
-	s := model.NewSession("session-1", &model.SessionParams{}, rules, board)
+	s := model.NewSession("1", &model.SessionParams{}, model.NewDefaultRules(), board)
 	for _, p := range players {
 		require.NoError(t, s.AddPlayer(p))
 	}

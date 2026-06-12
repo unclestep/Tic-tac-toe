@@ -17,10 +17,9 @@ import (
 func TestDisconnectSessionNotFound(t *testing.T) {
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
+	repo.On("Get", mock.Anything, "1").Return(nil, port.ErrSessionNotFound)
 
-	repo.On("Get", mock.Anything, "session-1").Return(nil, port.ErrSessionNotFound)
-
-	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "1"}
 	_, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, port.ErrSessionNotFound)
@@ -32,10 +31,9 @@ func TestDisconnectGetRepoError(t *testing.T) {
 	repoErr := errors.New("db connection failed")
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
+	repo.On("Get", mock.Anything, "1").Return(nil, repoErr)
 
-	repo.On("Get", mock.Anything, "session-1").Return(nil, repoErr)
-
-	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "1"}
 	_, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, repoErr)
@@ -47,10 +45,9 @@ func TestDisconnectEmptySessionGetTurnPlayerFails(t *testing.T) {
 	session := newSessionWithPlayers(t)
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
-
-	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "1"}
 	_, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, model.ErrPlayerNotFound)
@@ -60,13 +57,12 @@ func TestDisconnectEmptySessionGetTurnPlayerFails(t *testing.T) {
 }
 
 func TestDisconnectPlayerNotInSession(t *testing.T) {
-	session := newSessionWithPlayers(t, model.NewPlayer("p1", "p1", model.MarkX))
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
-
-	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "unknown"}
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "?"}
 	_, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, model.ErrPlayerNotFound)
@@ -75,21 +71,32 @@ func TestDisconnectPlayerNotInSession(t *testing.T) {
 	bot.AssertNotCalled(t, "MakeMove")
 }
 
+func TestDisconnectBotDontMoveInLobby(t *testing.T) {
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX))
+	repo := &mockSessionRepo{}
+	bot := &mockBotMover{}
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
+	repo.On("Save", mock.Anything, session).Return(nil)
+
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "1"}
+	_, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
+
+	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+	bot.AssertNotCalled(t, "MakeMove")
+}
+
 func TestDisconnectBotMoveError(t *testing.T) {
 	botErr := errors.New("bot make move error")
-	session := newSessionWithPlayers(t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
 	session.State = model.StatePlaying
 
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
-
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	bot.On("MakeMove", session, model.MarkX).Return(botErr)
 
-	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "1"}
 	_, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, botErr)
@@ -100,18 +107,14 @@ func TestDisconnectBotMoveError(t *testing.T) {
 
 func TestDisconnectSaveSessionError(t *testing.T) {
 	repoErr := errors.New("session save err")
-	session := newSessionWithPlayers(t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
 
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
-
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(repoErr)
 
-	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "1"}
 	_, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
 
 	assert.ErrorIs(t, err, repoErr)
@@ -119,47 +122,41 @@ func TestDisconnectSaveSessionError(t *testing.T) {
 }
 
 func TestDisconnectTurnPlayerTriggersBotMove(t *testing.T) {
-	session := newSessionWithPlayers(t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
 	session.State = model.StatePlaying
 
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
-
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(nil)
 	bot.On("MakeMove", session, model.MarkX).Return(nil)
 
-	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "p1"}
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "1"}
 	result, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.False(t, result.IsPlayerExist("p1"))
+	assert.False(t, result.IsPlayerExist("1"))
 	repo.AssertExpectations(t)
 	bot.AssertExpectations(t)
 }
 
-func TestDisconnectNotTurnPlayerSkipsBotMove(t *testing.T) {
-	session := newSessionWithPlayers(t,
-		model.NewPlayer("p1", "p1", model.MarkX),
-		model.NewPlayer("p2", "p2", model.MarkO),
-	)
+func TestDisconnectNotPlayerTurnBotDontMove(t *testing.T) {
+	session := newSessionWithPlayers(t, newPlayer("1", model.MarkX), newPlayer("2", model.MarkO))
+	session.State = model.StatePlaying
+
 	repo := &mockSessionRepo{}
 	bot := &mockBotMover{}
-
-	repo.On("Get", mock.Anything, "session-1").Return(session, nil)
+	repo.On("Get", mock.Anything, "1").Return(session, nil)
 	repo.On("Save", mock.Anything, session).Return(nil)
 
-	cmd := &port.DisconnectCommand{SessionUUID: "session-1", PlayerUUID: "p2"}
+	cmd := &port.DisconnectCommand{SessionUUID: "1", PlayerUUID: "2"}
 	result, err := usecase.NewDisconnect(repo, bot).Execute(context.Background(), cmd)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.True(t, result.IsPlayerExist("p1"))
-	assert.False(t, result.IsPlayerExist("p2"))
+	assert.True(t, result.IsPlayerExist("1"))
+	assert.False(t, result.IsPlayerExist("2"))
 	repo.AssertExpectations(t)
 	bot.AssertNotCalled(t, "MakeMove")
 }

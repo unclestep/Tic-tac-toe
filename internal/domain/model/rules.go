@@ -1,9 +1,9 @@
 package model
 
 type Rules struct {
-	UUID                    string
-	BoardWidth, BoardHeight int
-	WinLength               int
+	BoardWidth  int
+	BoardHeight int
+	WinLength   int
 }
 
 func NewDefaultRules() *Rules {
@@ -15,8 +15,10 @@ func NewDefaultRules() *Rules {
 }
 
 func (r *Rules) Clone() *Rules {
+	if r == nil {
+		return nil
+	}
 	return &Rules{
-		UUID:        r.UUID,
 		BoardWidth:  r.BoardWidth,
 		BoardHeight: r.BoardHeight,
 		WinLength:   r.WinLength,

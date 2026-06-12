@@ -3,15 +3,13 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
-	"tictactoe/internal/application/port"
+	"tictactoe/internal/infrastructure/storage/ds"
 	dsmodel "tictactoe/internal/infrastructure/storage/model"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type SessionDataSource struct {
@@ -24,70 +22,103 @@ func NewSessionDataSource(dbtx DBTX) *SessionDataSource {
 	}
 }
 
-func (ds *SessionDataSource) Fetch(parent context.Context, uuid string) (*dsmodel.SessionRecord, error) {
+func (s *SessionDataSource) Fetch(parent context.Context, opts ...ds.SessionOpt) ([]*dsmodel.SessionRecord, error) {
+	cfg := &ds.SessionConfig{}
+
+	for _, opt := range opts {
+		opt.ApplyToSession(cfg)
+	}
+
 	sessionSQL := `
-		SELECT uuid, rules_uuid, board, turn, winner, state, seed
-		FROM sessions
-		WHERE uuid = $1
+		SELECT s.uuid,
+			   r.board_width, r.board_height, r.win_length,
+			   p.uuid, p.user_uuid, p.name, p.mark,
+			   s.board, s.turn, s.winner, s.state, s.seed
+		FROM sessions s
+		LEFT JOIN players p ON p.session_uuid = s.uuid
+		JOIN rules r ON r.session_uuid = s.uuid
+		WHERE 1=1
 	`
+
+	var args []any
+
+	if cfg.State != nil {
+		args = append(args, *cfg.State)
+		sessionSQL += fmt.Sprintf(" AND s.state = $%d", len(args))
+	}
+
+	if cfg.UUIDs != nil {
+		args = append(args, cfg.UUIDs)
+		sessionSQL += fmt.Sprintf(" AND s.uuid = ANY($%d)", len(args))
+	}
 
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	var sr dsmodel.SessionRecord
-	var binBoard []byte
-	err := ds.dbtx.QueryRow(ctx, sessionSQL, uuid).Scan(&sr.UUID, &sr.RulesUUID, &binBoard, &sr.Turn, &sr.Winner, &sr.State, &sr.Seed)
+	rows, err := s.dbtx.Query(ctx, sessionSQL, args...)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("fetch: %w", port.ErrSessionNotFound)
-		}
-		return nil, fmt.Errorf("fetch: query row: %w", err)
+		return nil, fmt.Errorf("fetch: query: %w", err)
 	}
+	defer rows.Close()
 
-	if err := json.Unmarshal(binBoard, &sr.Board); err != nil {
-		return nil, fmt.Errorf("fetch: unmarshal board: %w", err)
-	}
-
-	playersSQL := `
-		SELECT uuid, name, mark
-		FROM players
-		WHERE session_uuid = $1
-	`
-
-	rows, err := ds.dbtx.Query(ctx, playersSQL, uuid)
-	if err != nil {
-		return nil, fmt.Errorf("fetch: query players: %w", err)
-	}
+	recordMap := make(map[string]*dsmodel.SessionRecord)
+	var order []string
 
 	for rows.Next() {
-		var p dsmodel.PlayerRecord
-		if err := rows.Scan(&p.UUID, &p.Name, &p.Mark); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("fetch: scan player: %w", err)
+		var s dsmodel.SessionRecord
+		var r dsmodel.RulesRecord
+		var p *dsmodel.PlayerRecord
+		var pUUID, pUserUUID, pName, pMark *string
+		var winnerUUID *string
+		var binBoard []byte
+
+		if err := rows.Scan(&s.UUID,
+			&r.BoardWidth, &r.BoardHeight, &r.WinLength,
+			&pUUID, &pUserUUID, &pName, &pMark,
+			&binBoard, &s.Turn, &winnerUUID, &s.State, &s.Seed); err != nil {
+			return nil, fmt.Errorf("fetch: %w", err)
 		}
-		sr.Players = append(sr.Players, &p)
+
+		if err := json.Unmarshal(binBoard, &s.Board); err != nil {
+			return nil, fmt.Errorf("fetch: unmarshal board: %w", err)
+		}
+
+		prev, seen := recordMap[s.UUID]
+		if !seen {
+			s.Rules = &r
+			recordMap[s.UUID] = &s
+			order = append(order, s.UUID)
+			prev = &s
+		}
+
+		if pUUID != nil && pName != nil && pMark != nil {
+			p = &dsmodel.PlayerRecord{
+				UUID:     *pUUID,
+				UserUUID: *pUserUUID,
+				Name:     *pName,
+				Mark:     *pMark,
+			}
+			prev.Players = append(prev.Players, p)
+			if winnerUUID != nil && *pUUID == *winnerUUID {
+				prev.Winner = p
+			}
+		}
 	}
-	rows.Close()
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("fetch: after rows close: %w", err)
 	}
 
-	return &sr, nil
+	records := make([]*dsmodel.SessionRecord, len(order))
+
+	for i, uuid := range order {
+		records[i] = recordMap[uuid]
+	}
+
+	return records, nil
 }
 
-func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.SessionRecord) error {
-	sessionSQL := `
-		INSERT INTO sessions (uuid, rules_uuid, board, turn, winner, state, seed)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT(uuid) DO UPDATE
-		SET board = EXCLUDED.board,
-			turn = EXCLUDED.turn,
-			winner = EXCLUDED.winner,
-			state = EXCLUDED.state,
-			seed = EXCLUDED.seed
-	`
-
+func (s *SessionDataSource) Store(parent context.Context, session *dsmodel.SessionRecord) error {
 	if session.Board == nil || len(session.Board.Cells) == 0 {
 		return fmt.Errorf("store: board is empty")
 	}
@@ -97,51 +128,71 @@ func (ds *SessionDataSource) Store(parent context.Context, session *dsmodel.Sess
 		return fmt.Errorf("store: marshal board: %w", err)
 	}
 
+	var winner *string
+	if session.Winner != nil {
+		winner = &session.Winner.UUID
+	}
+
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	_, err = ds.dbtx.Exec(ctx, sessionSQL,
-		session.UUID, session.RulesUUID, binBoard,
-		session.Turn, session.Winner, session.State, session.Seed,
-	)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23503" {
-		return fmt.Errorf("store: %w", port.ErrRulesNotFound)
-	}
+	tx, err := s.dbtx.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("store: session insert: %w", err)
+		return fmt.Errorf("store: begin tx: %w", err)
 	}
-
-	if len(session.Players) == 0 {
-		return nil
-	}
-
-	playerSQL := `
-		INSERT INTO players (uuid, session_uuid, name, mark)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT(session_uuid, mark) DO UPDATE
-		SET uuid = EXCLUDED.uuid,
-			name = EXCLUDED.name
-	`
+	defer tx.Rollback(ctx) //nolint:errcheck
 
 	batch := &pgx.Batch{}
-	for _, player := range session.Players {
-		batch.Queue(playerSQL, player.UUID, session.UUID, player.Name, player.Mark)
+
+	batch.Queue(`
+		INSERT INTO sessions(uuid, board, turn, winner, state, seed)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT(uuid) DO UPDATE
+		SET board = EXCLUDED.board,
+			turn = EXCLUDED.turn,
+			winner = EXCLUDED.winner,
+			state = EXCLUDED.state,
+			seed = EXCLUDED.seed;
+	`, session.UUID, binBoard, session.Turn, winner, session.State, session.Seed)
+
+	batch.Queue(`
+		INSERT INTO rules(session_uuid, board_width, board_height, win_length)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT(session_uuid) DO NOTHING
+	`, session.UUID, session.Rules.BoardWidth, session.Rules.BoardHeight, session.Rules.WinLength)
+
+	for _, p := range session.Players {
+		batch.Queue(`INSERT INTO players(uuid, session_uuid, user_uuid, name, mark)
+					VALUES ($1, $2, $3, $4, $5)
+					ON CONFLICT(session_uuid, mark) DO UPDATE
+					SET uuid = EXCLUDED.uuid,
+						user_uuid = EXCLUDED.user_uuid,
+						name = EXCLUDED.name
+		`, p.UUID, session.UUID, p.UserUUID, p.Name, p.Mark)
 	}
 
-	br := ds.dbtx.SendBatch(ctx, batch)
-	defer func() { _ = br.Close() }()
+	br := tx.SendBatch(ctx, batch)
 
-	for range session.Players {
+	for range batch.Len() {
 		if _, err := br.Exec(); err != nil {
+			_ = br.Close()
 			return fmt.Errorf("store: batch exec: %w", err)
 		}
+	}
+
+	if err := br.Close(); err != nil {
+		return fmt.Errorf("store: close batch: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		_ = br.Close()
+		return fmt.Errorf("store: commit: %w", err)
 	}
 
 	return nil
 }
 
-func (ds *SessionDataSource) Delete(parent context.Context, UUID string) error {
+func (s *SessionDataSource) Delete(parent context.Context, UUID string) error {
 	sql := `
 		DELETE FROM sessions WHERE uuid = $1
 	`
@@ -149,7 +200,7 @@ func (ds *SessionDataSource) Delete(parent context.Context, UUID string) error {
 	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
 	defer cancel()
 
-	_, err := ds.dbtx.Exec(ctx, sql, UUID)
+	_, err := s.dbtx.Exec(ctx, sql, UUID)
 	if err != nil {
 		return fmt.Errorf("delete: exec: %w", err)
 	}

@@ -25,10 +25,14 @@ func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*mode
 	wrap := func(err error) error {
 		return fmt.Errorf("connect (session %s): %w", cmd.SessionUUID, err)
 	}
-	session, err := uc.sessionRepo.Get(ctx, cmd.SessionUUID)
+	sessions, err := uc.sessionRepo.Get(ctx, port.WithUUID(cmd.SessionUUID))
 	if err != nil {
 		return nil, wrap(err)
 	}
+	if len(sessions) != 1 {
+		return nil, wrap(port.ErrReturnedNotOne)
+	}
+	session := sessions[0]
 
 	am := session.GetAvailableMarks()
 	if len(am) == 0 {
@@ -36,8 +40,12 @@ func (uc *Connect) Execute(ctx context.Context, cmd *port.ConnectCommand) (*mode
 	}
 
 	rng := rand.New(rand.NewSource(session.Params.Seed))
+	userUUID, ok := ctx.Value(port.UserUUIDKey).(string)
+	if !ok {
+		return nil, wrap(port.ErrInvalidCredentials)
+	}
 
-	player := model.NewPlayer(uuid.NewString(), cmd.PlayerName, am[rng.Intn(len(am))])
+	player := model.NewPlayer(uuid.NewString(), userUUID, cmd.PlayerName, am[rng.Intn(len(am))])
 	err = session.AddPlayer(player)
 	if err != nil {
 		return nil, wrap(err)

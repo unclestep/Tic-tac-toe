@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"tictactoe/internal/application/port"
+	"tictactoe/internal/application/usecase"
 	"tictactoe/internal/delivery/http/json/dto"
 	"tictactoe/internal/domain/model"
 	"tictactoe/pkg/geometry"
@@ -26,27 +27,43 @@ func ToSessionResponse(s *model.Session) dto.SessionResponse {
 		board[i] = sb.String()
 	}
 
+	turnPlayer, _ := s.GetTurnPlayer() //nolint:errcheck
+
 	resp := dto.SessionResponse{
 		SessionUUID: s.UUID,
 		State:       stateToString(s.State),
 		Board:       board,
+		Winner:      playerToResponse(s.Winner),
+		TurnPlayer:  playerToResponse(turnPlayer),
 		Players:     playersToResponse(s.Players),
-		Winner:      s.Winner,
 	}
 
 	return resp
 }
 
+func ToUserResponse(user *model.User) dto.UserResponse {
+	return dto.UserResponse{
+		UUID: user.UUID,
+	}
+}
+
 func playersToResponse(players []*model.Player) []*dto.Player {
 	ps := make([]*dto.Player, 0, len(players))
 	for _, player := range players {
-		ps = append(ps, &dto.Player{
-			UUID: player.UUID,
-			Name: player.Name,
-			Mark: string(markToByte(player.Mark)),
-		})
+		ps = append(ps, playerToResponse(player))
 	}
 	return ps
+}
+
+func playerToResponse(player *model.Player) *dto.Player {
+	if player == nil {
+		return nil
+	}
+	return &dto.Player{
+		UUID: player.UUID,
+		Name: player.Name,
+		Mark: string(markToByte(player.Mark)),
+	}
 }
 
 func stateToString(state model.State) string {
@@ -60,6 +77,18 @@ func stateToString(state model.State) string {
 	default:
 		return "Unknown"
 	}
+}
+
+func StringToState(state string) (model.State, error) {
+	switch state {
+	case "Lobby":
+		return model.StateLobby, nil
+	case "Playing":
+		return model.StatePlaying, nil
+	case "GameOver":
+		return model.StateGameOver, nil
+	}
+	return model.StateUnknown, fmt.Errorf("unknown state")
 }
 
 func markToByte(mark model.Mark) byte {
@@ -114,5 +143,19 @@ func ToDisconnectCommand(req *dto.DisconnectRequest) *port.DisconnectCommand {
 	return &port.DisconnectCommand{
 		SessionUUID: req.SessionUUID,
 		PlayerUUID:  req.PlayerUUID,
+	}
+}
+
+func ToSignUpCommand(req *dto.SignUpRequest) *usecase.SignUpCommand {
+	return &usecase.SignUpCommand{
+		Login:    req.Login,
+		Password: req.Password,
+	}
+}
+
+func ToSignInCommand(req *dto.SignInRequest) *usecase.SignInCommand {
+	return &usecase.SignInCommand{
+		Login:    req.Login,
+		Password: req.Password,
 	}
 }

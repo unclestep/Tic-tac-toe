@@ -44,8 +44,8 @@ func TestNewBoardValid(t *testing.T) {
 	assert.Equal(t, 3, b.Width)
 	assert.Equal(t, 3, b.Height)
 
-	for x := 0; x < 3; x++ {
-		for y := 0; y < 3; y++ {
+	for x := range 3 {
+		for y := range 3 {
 			mark, err := b.GetMark(geometry.NewPoint(x, y))
 			require.NoError(t, err)
 			assert.Equal(t, model.MarkEmpty, mark)
@@ -133,8 +133,8 @@ func TestClearAllCellsBecomeEmpty(t *testing.T) {
 
 	b.Clear()
 
-	for x := 0; x < 3; x++ {
-		for y := 0; y < 3; y++ {
+	for x := range 3 {
+		for y := range 3 {
 			mark, err := b.GetMark(geometry.NewPoint(x, y))
 			require.NoError(t, err)
 			assert.Equal(t, model.MarkEmpty, mark, "cell (%d,%d) must be empty after Clear", x, y)
